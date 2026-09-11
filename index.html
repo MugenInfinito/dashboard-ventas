@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consola de ventas · Semanas miércoles→martes</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --ink:#0B1A24;
+  --canvas:#EDF1F4;
+  --surface:#FFFFFF;
+  --line:#DBE3E9;
+  --muted:#5B6B79;
+  --primary:#0F5C73;
+  --primary-2:#14778F;
+  --primary-soft:#E1EEF2;
+  --up:#0A7C4A;
+  --up-soft:#E4F3EB;
+  --down:#BF3229;
+  --down-soft:#FBE9E7;
+  --amber:#C97A0E;
+  --radius:10px;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--canvas);color:var(--ink);font-family:var(--sans);
+  font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;
+}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:sticky;top:0;z-index:40;background:var(--ink);color:#fff;
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  padding:12px 20px;border-bottom:3px solid var(--primary);
+}
+.brand{display:flex;flex-direction:column;line-height:1.15;margin-right:auto}
+.brand b{font-size:15px;font-weight:650;letter-spacing:-.01em}
+.brand span{font-size:11px;color:#8FA8B5;text-transform:uppercase;letter-spacing:.09em}
+.tb-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button,select,input[type=date],input[type=search]{font-family:inherit;font-size:13px}
+.btn{
+  border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);color:#fff;
+  padding:8px 13px;border-radius:8px;cursor:pointer;transition:.15s;
+}
+.btn:hover{background:rgba(255,255,255,.16)}
+.btn.primary{background:var(--primary-2);border-color:var(--primary-2)}
+.btn.primary:hover{background:#1a8ba6}
+.btn:focus-visible,.chip:focus-visible,select:focus-visible{outline:2px solid #6FD3E8;outline-offset:2px}
+.filename{font-family:var(--mono);font-size:12px;color:#9FE0F0;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- layout ---------- */
+.wrap{max-width:1500px;margin:0 auto;padding:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+section{margin-bottom:22px}
+.sec-head{display:flex;align-items:baseline;gap:12px;margin:0 0 12px}
+.sec-head h2{font-size:15px;font-weight:650;margin:0;letter-spacing:-.01em}
+.sec-num{
+  font-family:var(--mono);font-size:11px;color:var(--primary);background:var(--primary-soft);
+  border-radius:5px;padding:2px 7px;font-weight:600
+}
+.sec-head p{margin:0;color:var(--muted);font-size:12px}
+.spacer{margin-left:auto}
+
+/* ---------- empty state ---------- */
+#empty{padding:70px 24px;text-align:center}
+#empty h1{font-size:24px;margin:0 0 8px;letter-spacing:-.02em}
+#empty p{color:var(--muted);max-width:620px;margin:0 auto 6px}
+.drop{
+  margin:26px auto 0;max-width:640px;border:2px dashed var(--line);border-radius:14px;
+  padding:38px 20px;background:var(--surface);transition:.15s;cursor:pointer
+}
+.drop.over{border-color:var(--primary);background:var(--primary-soft)}
+.drop b{display:block;font-size:16px;margin-bottom:4px}
+.drop small{color:var(--muted)}
+
+/* ---------- week strip (signature) ---------- */
+.weekstrip{display:flex;gap:0;overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.wk{
+  flex:1 0 168px;padding:12px 14px;border-right:1px solid var(--line);position:relative;
+  cursor:pointer;transition:.15s
+}
+.wk:last-child{border-right:0}
+.wk:hover{background:#F7FAFB}
+.wk.active{background:var(--primary-soft);box-shadow:inset 0 -3px 0 var(--primary)}
+.wk .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.wk .rng{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px}
+.wk .val{font-family:var(--mono);font-size:17px;font-weight:600;margin-top:6px;letter-spacing:-.03em}
+.wk .bar{height:4px;background:var(--line);border-radius:3px;margin-top:8px;overflow:hidden}
+.wk .bar i{display:block;height:100%;background:var(--primary)}
+
+/* ---------- KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;border-left:3px solid var(--primary)}
+.kpi .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.kpi .v{font-family:var(--mono);font-size:22px;font-weight:600;margin-top:5px;letter-spacing:-.035em;word-break:break-word}
+.kpi .v.sm{font-size:14px;font-weight:600;letter-spacing:0;font-family:var(--sans);line-height:1.3}
+.kpi .s{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* ---------- filters ---------- */
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end}
+.f label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin-bottom:5px}
+.f select,.f input{
+  width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink)
+}
+.f select[multiple]{height:96px}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--line);flex-wrap:wrap}
+.tab{
+  border:0;background:transparent;padding:11px 18px;cursor:pointer;font-weight:650;font-size:14px;
+  color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:.15s;border-radius:6px 6px 0 0
+}
+.tab:hover{color:var(--ink);background:#F7FAFB}
+.tab.on{color:var(--primary);border-bottom-color:var(--primary)}
+
+/* ---------- toggles ---------- */
+.toggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+.chip{border:0;background:#fff;padding:7px 14px;cursor:pointer;color:var(--muted);font-weight:600;font-size:12px}
+.chip+.chip{border-left:1px solid var(--line)}
+.chip.on{background:var(--primary);color:#fff}
+
+/* ---------- charts ---------- */
+.chartbox{position:relative;height:330px}
+.chartbox.tall{height:390px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:980px){.grid2{grid-template-columns:1fr}}
+
+/* ---------- variation cards ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.vcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.vcard h4{margin:0 0 2px;font-size:13px;font-weight:650}
+.vcard .vs{font-size:11px;color:var(--muted);margin-bottom:10px;font-family:var(--mono)}
+.metric{padding:9px 0;border-top:1px dashed var(--line)}
+.metric .m-k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.metric .m-v{font-family:var(--mono);font-size:16px;font-weight:600;margin-top:2px;letter-spacing:-.02em}
+.up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--muted)}
+.pill{display:inline-block;font-family:var(--mono);font-size:12px;font-weight:600;padding:1px 7px;border-radius:20px;margin-left:6px}
+.pill.up{background:var(--up-soft)} .pill.down{background:var(--down-soft)} .pill.flat{background:#EEF1F3}
+
+/* ---------- leader cards ---------- */
+.lcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;border-top:3px solid var(--amber)}
+.lcard.units{border-top-color:var(--primary-2)}
+.lcard .wkname{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.lcard .pname{font-size:13px;font-weight:600;margin:6px 0 10px;line-height:1.35;min-height:36px}
+.lcard .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:5px 0;border-top:1px dashed var(--line)}
+.lcard .row span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;flex:0 0 auto}
+.lcard .row b{font-family:var(--mono);font-size:15px;font-weight:600;letter-spacing:-.02em;text-align:right}
+.plat-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 auto}
+
+/* ---------- table ---------- */
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{
+  text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
+  font-weight:700;padding:9px 12px;border-bottom:2px solid var(--line);white-space:nowrap;background:#F8FAFB
+}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:hover{background:#F7FAFB}
+td.n{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+th.n{text-align:right}
+tfoot td{font-weight:700;border-top:2px solid var(--line);background:#F8FAFB}
+
+/* ---------- heatmap ---------- */
+.heat{display:grid;gap:4px;grid-template-columns:auto repeat(7,minmax(52px,1fr))}
+.heat div{padding:9px 6px;text-align:center;border-radius:6px;font-family:var(--mono);font-size:11px}
+.heat .hh{background:transparent;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:10px}
+.heat .hr{background:transparent;color:var(--muted);font-weight:700;text-align:left;padding-left:0}
+.heat .cell{color:#0B1A24;border:1px solid rgba(0,0,0,.04)}
+
+/* ---------- participation bars ---------- */
+.partrow{margin-bottom:12px}
+.partrow .ph{display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:5px}
+.stack{display:flex;height:26px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.stack i{display:block;position:relative}
+.stack i span{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)
+}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
+.legend span{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+
+.alertrow{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--line)}
+.alertrow:last-child{border-bottom:0}
+.alertrow .ic{font-family:var(--mono);font-weight:700;font-size:12px;padding:2px 7px;border-radius:5px;flex:0 0 auto}
+.alertrow .tx{font-size:13px}
+.alertrow .tx small{display:block;color:var(--muted);font-size:11px;font-family:var(--mono)}
+
+.note{font-size:12px;color:var(--muted);margin-top:10px}
+.hidden{display:none !important}
+#mapping .filters{margin-top:4px}
+.warnbar{background:#FFF8E6;border:1px solid #F0DCA8;color:#7A5A05;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px}
+
+@media print{
+  .topbar,.filters-card,#mapping,.toggle,.noprint{display:none !important}
+  body{background:#fff}
+  .card,.kpi,.vcard,.lcard{break-inside:avoid;border-color:#ccc}
+  section{break-inside:avoid}
+  .wrap{max-width:none;padding:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <b>Consola de ventas</b>
+    <span>Semanas miércoles → martes</span>
+  </div>
+  <div class="tb-actions">
+    <span class="filename" id="fileLabel"></span>
+    <button class="btn primary" id="btnLoad">Cargar Excel</button>
+    <button class="btn" id="btnMap">Columnas</button>
+    <button class="btn" id="btnXls">Exportar Excel</button>
+    <button class="btn" id="btnPdf">Exportar PDF</button>
+    <input type="file" id="file" accept=".xlsx,.xls,.csv" hidden>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- EMPTY STATE -->
+  <div id="empty">
+    <h1>Sube el archivo de ventas y el dashboard se arma solo</h1>
+    <p>Lee <b>.xlsx</b>, <b>.xls</b> y <b>.csv</b> directamente en el navegador. Detecta las columnas de fecha, producto, marca, cantidad, valor y plataforma, y agrupa todo en semanas de miércoles a martes.</p>
+    <p>Nada se sube a internet: el archivo se procesa en tu equipo.</p>
+    <div class="drop" id="drop">
+      <b>Arrastra el archivo aquí</b>
+      <small>o haz clic para buscarlo</small>
+    </div>
+  </div>
+
+  <!-- MAPPING -->
+  <section id="mapping" class="hidden">
+    <div class="card">
+      <div class="sec-head">
+        <span class="sec-num">MAP</span>
+        <h2>Columnas detectadas</h2>
+        <p>Cámbialas si alguna quedó mal asignada.</p>
+      </div>
+      <div class="filters" id="mapFields"></div>
+      <div class="note">La plataforma se toma por defecto de la última columna del archivo, como en tu formato.</div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <div id="dash" class="hidden">
+
+    <div id="warn" class="warnbar hidden"></div>
+
+    <!-- TABS -->
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-pane="week">Comparación semanal</button>
+      <button class="tab" data-pane="month">Comparación mensual</button>
+    </div>
+
+    <!-- FILTERS (compartidos entre pestañas) -->
+    <section class="filters-card">
+      <div class="card">
+        <div class="sec-head"><span class="sec-num">10</span><h2>Filtros</h2><p>Todo el tablero se recalcula al instante.</p>
+          <span class="spacer"></span>
+          <button class="btn" id="btnReset" style="background:#fff;color:var(--ink);border-color:var(--line)">Quitar filtros</button>
+        </div>
+        <div class="filters">
+          <div class="f" id="fWeekWrap"><label>Semana</label><select id="fWeek"><option value="">Todas</option></select></div>
+          <div class="f"><label>Plataforma</label><select id="fPlat" multiple></select></div>
+          <div class="f"><label>Marca</label><select id="fBrand" multiple></select></div>
+          <div class="f"><label>Producto contiene</label><input type="search" id="fProd" placeholder="ej. router, TP-Link"></div>
+          <div class="f"><label>Desde</label><input type="date" id="fFrom"></div>
+          <div class="f"><label>Hasta</label><input type="date" id="fTo"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= PESTAÑA SEMANAL ======================= -->
+    <div id="paneWeek">
+
+    <!-- WEEK STRIP -->
+    <section>
+      <div class="weekstrip" id="weekstrip"></div>
+    </section>
+
+    <!-- KPIs -->
+    <section>
+      <div class="sec-head"><span class="sec-num">08</span><h2>Indicadores principales</h2><p id="kpiRange"></p></div>
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <!-- 1. WEEKLY COMPARISON -->
+    <section>
+      <div class="card">
+        <div class="sec-head"><span class="sec-num">01</span><h2>Comparación semanal</h2>
+          <span class="spacer"></span>
+          <div class="toggle noprint" id="tgWeek">
+            <button class="chip on" data-m="value">Valor vendido</button>
+            <button class="chip" data-m="units">Unidades</button>
+          </div>
+        </div>
+        <div class="chartbox"><canvas id="chWeek"></canvas></div>
+      </div>
+    </section>
+
+    <!-- 2. VARIATION -->
+    <section>
+      <div class="sec-head"><span class="sec-num">02</span><h2>Variación entre semanas</h2><p>Cada semana contra la anterior.</p></div>
+      <div class="cards" id="varCards"></div>
+    </section>
+
+    <!-- 3. TOP BY VALUE -->
+    <section>
+      <div class="sec-head"><span class="sec-num">03</span><h2>Producto más vendido por valor</h2></div>
+      <div class="cards" id="topValue"></div>
+    </section>
+
+    <!-- 4. TOP BY UNITS -->
+    <section>
+      <div class="sec-head"><span class="sec-num">04</span><h2>Producto más vendido por unidades</h2></div>
+      <div class="cards" id="topUnits"></div>
+    </section>
+
+    <!-- 5. PLATFORM LEADERS -->
+    <section>
+      <div class="sec-head"><span class="sec-num">05</span><h2>Plataforma con mayor movimiento</h2></div>
+      <div class="cards" id="platLead"></div>
+    </section>
+
+    <!-- 6. PLATFORM COMPARISON -->
+    <section>
+      <div class="card">
+        <div class="sec-head"><span class="sec-num">06</span><h2>Comparativo de plataformas</h2>
+          <span class="spacer"></span>
+          <div class="toggle noprint" id="tgPlat">
+            <button class="chip on" data-m="value">Valor vendido</button>
+            <button class="chip" data-m="units">Unidades</button>
+          </div>
+        </div>
+        <div class="chartbox tall"><canvas id="chPlat"></canvas></div>
+      </div>
+    </section>
+
+    <!-- 7. PARTICIPATION -->
+    <section>
+      <div class="grid2">
+        <div class="card">
+          <div class="sec-head"><span class="sec-num">07</span><h2>Participación por semana</h2></div>
+          <div id="partBars"></div>
+          <div class="legend" id="partLegend"></div>
+        </div>
+        <div class="card">
+          <div class="sec-head"><span class="sec-num">07</span><h2>Participación del período</h2></div>
+          <div class="chartbox"><canvas id="chDonut"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. SUMMARY TABLE -->
+    <section>
+      <div class="card">
+        <div class="sec-head"><span class="sec-num">09</span><h2>Resumen semanal</h2></div>
+        <div class="tablewrap"><table id="tblSum"></table></div>
+      </div>
+    </section>
+
+    <!-- DAILY TREND -->
+    <section>
+      <div class="card">
+        <div class="sec-head"><span class="sec-num">+</span><h2>Tendencia diaria</h2>
+          <span class="spacer"></span>
+          <div class="toggle noprint" id="tgDay">
+            <button class="chip on" data-m="value">Valor</button>
+            <button class="chip" data-m="units">Unidades</button>
+          </div>
+        </div>
+        <div class="chartbox"><canvas id="chDay"></canvas></div>
+      </div>
+    </section>
+
+    <!-- HEATMAP -->
+    <section>
+      <div class="card">
+        <div class="sec-head"><span class="sec-num">+</span><h2>Mapa de calor por día de la semana</h2><p>Valor vendido. Cada fila es una semana miércoles→martes.</p></div>
+        <div class="heat" id="heat"></div>
+      </div>
+    </section>
+
+    <!-- TOP 10 -->
+    <section>
+      <div class="grid2">
+        <div class="card">
+          <div class="sec-head"><span class="sec-num">+</span><h2>Top 10 productos</h2>
+            <span class="spacer"></span>
+            <select id="topWeek" style="padding:6px 9px;border:1px solid var(--line);border-radius:7px"></select>
+          </div>
+          <div class="tablewrap"><table id="tblTop"></table></div>
+        </div>
+        <div class="card">
+          <div class="sec-head"><span class="sec-num">+</span><h2>Crecimientos y caídas atípicas</h2><p>Última semana vs anterior.</p></div>
+          <div id="alerts"></div>
+        </div>
+      </div>
+    </section>
+
+    </div><!-- /paneWeek -->
+
+    <!-- ======================= PESTAÑA MENSUAL ======================= -->
+    <div id="paneMonth" class="hidden">
+
+      <!-- month KPIs -->
+      <section>
+        <div class="sec-head"><span class="sec-num">M1</span><h2>Indicadores por período</h2><p id="mKpiRange"></p></div>
+        <div class="kpis" id="mKpis" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))"></div>
+      </section>
+
+      <!-- month comparison bar -->
+      <section>
+        <div class="card">
+          <div class="sec-head"><span class="sec-num">M2</span><h2>Comparación mensual</h2>
+            <span class="spacer"></span>
+            <div class="toggle noprint" id="tgMonth">
+              <button class="chip on" data-m="value">Valor vendido</button>
+              <button class="chip" data-m="units">Unidades</button>
+            </div>
+          </div>
+          <div class="chartbox"><canvas id="chMonth"></canvas></div>
+        </div>
+      </section>
+
+      <!-- month variation -->
+      <section>
+        <div class="sec-head"><span class="sec-num">M3</span><h2>Variación entre meses</h2><p>Cada mes contra el anterior.</p></div>
+        <div class="cards" id="mVarCards"></div>
+      </section>
+
+      <!-- month platform comparison -->
+      <section>
+        <div class="card">
+          <div class="sec-head"><span class="sec-num">M4</span><h2>Comparativo de plataformas por mes</h2>
+            <span class="spacer"></span>
+            <div class="toggle noprint" id="tgMonthPlat">
+              <button class="chip on" data-m="value">Valor vendido</button>
+              <button class="chip" data-m="units">Unidades</button>
+            </div>
+          </div>
+          <div class="chartbox tall"><canvas id="chMonthPlat"></canvas></div>
+        </div>
+      </section>
+
+      <!-- month summary table -->
+      <section>
+        <div class="card">
+          <div class="sec-head"><span class="sec-num">M5</span><h2>Resumen mensual</h2></div>
+          <div class="tablewrap"><table id="tblMonth"></table></div>
+        </div>
+      </section>
+
+    </div><!-- /paneMonth -->
+
+  </div><!-- /dash -->
+</div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   1. UTILIDADES
+   ========================================================= */
+const fmtMoney = n => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(n||0);
+const fmtMoneyShort = n => {
+  const a = Math.abs(n||0);
+  if(a>=1e9) return '$'+(n/1e9).toFixed(1).replace('.',',')+' MM';
+  if(a>=1e6) return '$'+(n/1e6).toFixed(1).replace('.',',')+' M';
+  if(a>=1e3) return '$'+Math.round(n/1e3)+' K';
+  return fmtMoney(n);
+};
+const fmtInt = n => new Intl.NumberFormat('es-CO',{maximumFractionDigits:0}).format(n||0);
+const fmtPct = n => (n>=0?'+':'')+new Intl.NumberFormat('es-CO',{maximumFractionDigits:1}).format(n)+'%';
+const norm = s => (s??'').toString().trim().toLowerCase()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const DAYS = ['Mié','Jue','Vie','Sáb','Dom','Lun','Mar']; // orden por defecto (ancla en miércoles)
+const DOW_FULL = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+/* Nombres de los 7 días en el orden que arranca el ancla actual. */
+function weekDayNames(){
+  if(!ANCHOR) return DAYS;
+  const start=ANCHOR.getDay();
+  return Array.from({length:7},(_,i)=>DOW_FULL[(start+i)%7]);
+}
+const MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const dLabel = d => d.getDate()+' '+MONTHS[d.getMonth()];
+const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+
+/* Números en formato colombiano o inglés */
+function parseNum(v){
+  if(v==null||v==='') return 0;
+  if(typeof v==='number') return isFinite(v)?v:0;
+  let s=String(v).replace(/[^\d.,\-]/g,'').trim();
+  if(!s) return 0;
+  const lastC=s.lastIndexOf(','), lastD=s.lastIndexOf('.');
+  if(lastC>-1&&lastD>-1){
+    if(lastC>lastD) s=s.replace(/\./g,'').replace(',','.');
+    else s=s.replace(/,/g,'');
+  }else if(lastC>-1){
+    s = (s.length-lastC-1)===3 && s.split(',').length>2 ? s.replace(/,/g,'')
+      : ((s.length-lastC-1)===3 ? s.replace(',','') : s.replace(',','.'));
+  }else if(lastD>-1){
+    const dec=s.length-lastD-1;
+    if(dec===3 && s.split('.').length>2) s=s.replace(/\./g,'');
+    else if(dec===3 && /^\d{1,3}\.\d{3}$/.test(s)) s=s.replace('.','');
+  }
+  const n=parseFloat(s);
+  return isFinite(n)?n:0;
+}
+
+/* Fechas: Date, serial de Excel o texto */
+function parseDate(v){
+  if(v instanceof Date && !isNaN(v)) return new Date(v.getFullYear(),v.getMonth(),v.getDate());
+  if(typeof v==='number' && v>20000 && v<80000){
+    const d=new Date(Math.round((v-25569)*86400*1000));
+    return new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());
+  }
+  if(typeof v==='string'){
+    const s=v.trim();
+    let m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+    if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+    m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
+    if(m){
+      let y=+m[3]; if(y<100) y+=2000;
+      let a=+m[1], b=+m[2];
+      if(a>12) return new Date(y,b-1,a);      // dd/mm
+      if(b>12) return new Date(y,a-1,b);      // mm/dd
+      return new Date(y,b-1,a);               // asumir dd/mm (Colombia)
+    }
+    const d=new Date(s);
+    if(!isNaN(d)) return new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  }
+  return null;
+}
+
+/* Colores por plataforma */
+const PLAT_COLORS={
+  'mercado libre':'#F0B429','mercadolibre':'#F0B429','meli':'#F0B429',
+  'shopify':'#5E8E3E','falabella':'#7CB518','addi':'#6B4EFF','whatsapp':'#1FA855',
+  'linio':'#F26522','amazon':'#FF9900','rappi':'#E8452C','alkosto':'#D1332E',
+  'exito':'#C9A227','ktronix':'#2A6FDB','tienda propia':'#0F5C73','web':'#0F5C73',
+  'olimpica':'#B3245C','homecenter':'#D66A00','claro':'#D6001C','dafiti':'#3A3A3A'
+};
+const FALLBACK=['#0F5C73','#C97A0E','#6B4EFF','#0A7C4A','#BF3229','#4A6FA5','#8E44AD','#16A085','#D35400','#2C3E50','#7F8C8D','#AF601A'];
+const _assigned={};
+function platColor(p){
+  const k=norm(p);
+  if(PLAT_COLORS[k]) return PLAT_COLORS[k];
+  for(const key in PLAT_COLORS) if(k.includes(key)) return PLAT_COLORS[key];
+  if(!_assigned[k]) _assigned[k]=FALLBACK[Object.keys(_assigned).length % FALLBACK.length];
+  return _assigned[k];
+}
+
+/* =========================================================
+   2. ESTADO
+   ========================================================= */
+let RAW=[];        // objetos crudos del Excel
+let HEADERS=[];    // encabezados
+let MAP={};        // mapeo de columnas
+let ROWS=[];       // filas normalizadas
+let WEEKS=[];      // definición de semanas
+let ANCHOR=null;   // primer miércoles
+const charts={};
+const mode={week:'value',plat:'value',day:'value',month:'value',mplat:'value'};
+
+/* =========================================================
+   3. LECTURA DEL ARCHIVO
+   ========================================================= */
+function readWorkbook(data,name){
+  const wb=XLSX.read(data,{type:'array',cellDates:true});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const grid=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:false});
+  if(!grid.length) return alert('La primera hoja del archivo está vacía.');
+
+  // fila de encabezado = primera con 3+ celdas de texto no vacías
+  let hi=0;
+  for(let i=0;i<Math.min(grid.length,15);i++){
+    const filled=grid[i].filter(c=>c!==null&&String(c).trim()!=='').length;
+    if(filled>=3){hi=i;break;}
+  }
+  const seen={};
+  HEADERS=grid[hi].map((h,i)=>{
+    let name=(h==null||String(h).trim()==='')?('Columna '+(i+1)):String(h).trim();
+    if(seen[name]!==undefined){seen[name]++;name=name+' ('+seen[name]+')';}else seen[name]=1;
+    return name;
+  });
+  RAW=[];
+  for(let i=hi+1;i<grid.length;i++){
+    const r=grid[i]; if(!r||r.every(c=>c===null||String(c).trim()==='')) continue;
+    const o={}; HEADERS.forEach((h,j)=>o[h]=r[j]??null); RAW.push(o);
+  }
+  document.getElementById('fileLabel').textContent=name+' · '+fmtInt(RAW.length)+' filas';
+  autoMap(); buildMapUI(); process();
+}
+
+function autoMap(){
+  const find=(re,exclude)=>HEADERS.find(h=>re.test(norm(h))&&(!exclude||!exclude.test(norm(h))));
+  MAP={
+    date:  find(/fecha|date|dia\b|día|creaci|emisi/) || HEADERS[0],
+    product: find(/producto|articulo|item|descripcion|titulo|nombre|sku.*nombre/) || find(/sku|referencia/) || HEADERS[1],
+    brand: find(/marca|brand|fabricante/) || '',
+    qty:   find(/cantidad|unidades|und\b|qty|cant\b|piezas/) || '',
+    value: find(/valor.*(neto|total|vendido|venta)|neto|total.*(venta|valor)|venta.*total|importe|monto|ingreso|revenue|subtotal/) || find(/valor|total|venta|precio/),
+    platform: find(/plataforma|canal|marketplace|tienda|origen|cuenta/) || HEADERS[HEADERS.length-1],
+    order: find(/pedido|orden|order|factura|n.*venta|id.*venta/) || ''
+  };
+}
+
+function buildMapUI(){
+  const fields=[['date','Fecha'],['product','Producto'],['brand','Marca'],['qty','Cantidad'],['value','Valor'],['platform','Plataforma'],['order','Pedido / orden']];
+  document.getElementById('mapFields').innerHTML=fields.map(([k,l])=>`
+    <div class="f"><label>${l}</label><select data-map="${k}">
+      <option value="">— sin columna —</option>
+      ${HEADERS.map(h=>`<option value="${h.replace(/"/g,'&quot;')}" ${MAP[k]===h?'selected':''}>${h}</option>`).join('')}
+    </select></div>`).join('');
+  document.querySelectorAll('#mapFields select').forEach(s=>{
+    s.onchange=()=>{MAP[s.dataset.map]=s.value;process();};
+  });
+}
+
+/* =========================================================
+   4. NORMALIZACIÓN Y SEMANAS
+   ========================================================= */
+/* Reconstruye las semanas a partir de una fecha ancla.
+   - Si se pasa una fecha (el filtro "Desde"), la Semana 1 empieza EXACTO ese día.
+   - Si no, ancla al miércoles anterior o igual a la primera fecha (regla por defecto). */
+function buildWeeks(anchorDate){
+  if(!ROWS.length) return;
+  const first=ROWS[0].date;
+  if(anchorDate instanceof Date && !isNaN(anchorDate)){
+    ANCHOR=new Date(anchorDate.getFullYear(),anchorDate.getMonth(),anchorDate.getDate());
+  }else{
+    ANCHOR=new Date(first); ANCHOR.setDate(ANCHOR.getDate()-((first.getDay()-3+7)%7));
+  }
+  const last=ROWS[ROWS.length-1].date;
+  const spanDays=Math.floor((last-ANCHOR)/86400000);
+  const nWeeks=Math.max(1,Math.floor(spanDays/7)+1);
+  WEEKS=[];
+  for(let i=0;i<nWeeks;i++){
+    const s=new Date(ANCHOR); s.setDate(s.getDate()+i*7);
+    const e=new Date(s); e.setDate(e.getDate()+6);
+    WEEKS.push({i:i+1,name:'Semana '+(i+1),start:s,end:e,label:dLabel(s)+' → '+dLabel(e)});
+  }
+  ROWS.forEach(r=>{
+    const diff=Math.floor((r.date-ANCHOR)/86400000);
+    r.w = diff<0 ? 0 : Math.floor(diff/7)+1;  // 0 = anterior al ancla (queda fuera)
+    r.dow = ((diff%7)+7)%7;                     // 0 = mismo día de la semana que el ancla
+  });
+}
+let _lastAnchorKey=null; // evita reconstruir en cada render si no cambió el "Desde"
+
+function process(){
+  ROWS=[];
+  let noDate=0;
+  RAW.forEach(r=>{
+    const d=parseDate(r[MAP.date]);
+    if(!d){noDate++;return;}
+    const qty=MAP.qty?parseNum(r[MAP.qty]):1;
+    const val=MAP.value?parseNum(r[MAP.value]):0;
+    ROWS.push({
+      date:d, ts:d.getTime(),
+      product:(r[MAP.product]??'(sin producto)').toString().trim()||'(sin producto)',
+      brand:MAP.brand?((r[MAP.brand]??'(sin marca)').toString().trim()||'(sin marca)'):'(sin marca)',
+      platform:(r[MAP.platform]??'(sin plataforma)').toString().trim()||'(sin plataforma)',
+      qty: qty||0, value: val||0,
+      order: MAP.order?String(r[MAP.order]??''):''
+    });
+  });
+  if(!ROWS.length){alert('No se pudo leer ninguna fecha válida. Revisa el mapeo de columnas.');return;}
+
+  ROWS.sort((a,b)=>a.ts-b.ts);
+  buildWeeks(); // ancla por defecto: miércoles anterior o igual a la primera fecha
+
+  const w=document.getElementById('warn');
+  if(noDate>0){
+    w.classList.remove('hidden');
+    w.style.background='#FFF8E6';w.style.borderColor='#F0DCA8';w.style.color='#7A5A05';
+    w.textContent=`Se omitieron ${fmtInt(noDate)} filas sin fecha reconocible. Si son muchas, revisa el mapeo de la columna de fecha.`;
+  }
+  else w.classList.add('hidden');
+
+  document.getElementById('empty').classList.add('hidden');
+  document.getElementById('dash').classList.remove('hidden');
+  buildFilters(); render();
+}
+
+/* =========================================================
+   5. FILTROS
+   ========================================================= */
+function buildFilters(){
+  const uniq=k=>[...new Set(ROWS.map(r=>r[k]))].sort((a,b)=>a.localeCompare(b,'es'));
+  const fw=document.getElementById('fWeek');
+  fw.innerHTML='<option value="">Todas las semanas</option>'+WEEKS.map(w=>`<option value="${w.i}">${w.name} · ${w.label}</option>`).join('');
+  document.getElementById('fPlat').innerHTML=uniq('platform').map(p=>`<option value="${p.replace(/"/g,'&quot;')}">${p}</option>`).join('');
+  document.getElementById('fBrand').innerHTML=uniq('brand').map(p=>`<option value="${p.replace(/"/g,'&quot;')}">${p}</option>`).join('');
+  document.getElementById('fFrom').value=''; document.getElementById('fTo').value='';
+  document.getElementById('topWeek').innerHTML='<option value="">Todo el período</option>'+WEEKS.map(w=>`<option value="${w.i}">${w.name}</option>`).join('');
+}
+const sel=id=>[...document.getElementById(id).selectedOptions].map(o=>o.value);
+
+/* Refresca los desplegables de semana tras recalcular el ancla (conserva la selección válida). */
+function rebuildWeekSelect(){
+  const fw=document.getElementById('fWeek'), tw=document.getElementById('topWeek');
+  const cur=fw.value, curTop=tw.value;
+  fw.innerHTML='<option value="">Todas las semanas</option>'+WEEKS.map(w=>`<option value="${w.i}">${w.name} · ${w.label}</option>`).join('');
+  tw.innerHTML='<option value="">Todo el período</option>'+WEEKS.map(w=>`<option value="${w.i}">${w.name}</option>`).join('');
+  if([...fw.options].some(o=>o.value===cur)) fw.value=cur;
+  if([...tw.options].some(o=>o.value===curTop)) tw.value=curTop;
+}
+function filtered(ignoreWeek){
+  const wk=document.getElementById('fWeek').value;
+  const plats=sel('fPlat'), brands=sel('fBrand');
+  const q=norm(document.getElementById('fProd').value);
+  const from=document.getElementById('fFrom').value?parseDate(document.getElementById('fFrom').value):null;
+  const to=document.getElementById('fTo').value?parseDate(document.getElementById('fTo').value):null;
+  return ROWS.filter(r=>{
+    if(!ignoreWeek && wk && r.w!==+wk) return false;
+    if(plats.length && !plats.includes(r.platform)) return false;
+    if(brands.length && !brands.includes(r.brand)) return false;
+    if(q && !norm(r.product).includes(q)) return false;
+    if(from && r.date<from) return false;
+    if(to && r.date>to) return false;
+    return true;
+  });
+}
+
+/* =========================================================
+   6. AGREGACIONES
+   ========================================================= */
+function agg(rows,key){
+  const m=new Map();
+  rows.forEach(r=>{
+    const k=r[key];
+    const o=m.get(k)||{key:k,value:0,qty:0,orders:new Set(),n:0};
+    o.value+=r.value; o.qty+=r.qty; o.n++;
+    if(r.order) o.orders.add(r.order);
+    m.set(k,o);
+  });
+  return [...m.values()].map(o=>({...o,orders:o.orders.size||o.n}));
+}
+/* Pedidos = número de registros. Cada fila del archivo es un pedido. */
+function countOrders(rows){ return rows.length; }
+function weekStats(rows){
+  return WEEKS.map(w=>{
+    const rs=rows.filter(r=>r.w===w.i);
+    const value=rs.reduce((s,r)=>s+r.value,0);
+    const qty=rs.reduce((s,r)=>s+r.qty,0);
+    const orders=countOrders(rs);
+    return {...w,rows:rs,value,qty,orders,ticket:orders?value/orders:0};
+  });
+}
+const maxBy=(arr,f)=>arr.length?arr.reduce((a,b)=>f(b)>f(a)?b:a):null;
+
+/* =========================================================
+   7. RENDER
+   ========================================================= */
+function render(){
+  // La Semana 1 arranca en la fecha del filtro "Desde"; si está vacío, regla por defecto.
+  const fromVal=document.getElementById('fFrom').value;
+  const anchorDate=fromVal?parseDate(fromVal):null;
+  const key=fromVal||'auto';
+  if(key!==_lastAnchorKey){
+    buildWeeks(anchorDate);
+    _lastAnchorKey=key;
+    rebuildWeekSelect();
+  }
+  const rows=filtered();
+  const ws=weekStats(rows);
+  const active=ws.filter(w=>w.rows.length);
+  renderStrip(active,rows);
+  renderKPIs(rows,active);
+  renderWeekChart(active);
+  renderVariation(active);
+  renderTopProducts(active);
+  renderPlatformLeaders(active);
+  renderPlatformChart(active,rows);
+  renderParticipation(active,rows);
+  renderTable(active);
+  renderDaily(rows);
+  renderHeat(active);
+  renderTop10(rows);
+  renderAlerts(active);
+}
+
+/* =========================================================
+   PESTAÑA MENSUAL
+   ========================================================= */
+let activeTab='week';
+function renderActive(){
+  if(!ROWS.length) return;
+  if(activeTab==='month') renderMonths();
+  else render();
+}
+
+/* Agrupa por mes calendario. Ignora el filtro de semana (no aplica a meses). */
+function monthStats(rows){
+  const m=new Map();
+  rows.forEach(r=>{
+    const key=r.date.getFullYear()*12+r.date.getMonth();
+    const o=m.get(key)||{key,year:r.date.getFullYear(),month:r.date.getMonth(),rows:[],value:0,qty:0};
+    o.rows.push(r); o.value+=r.value; o.qty+=r.qty;
+    m.set(key,o);
+  });
+  return [...m.values()].sort((a,b)=>a.key-b.key).map(o=>{
+    const name=MONTHS[o.month].charAt(0).toUpperCase()+MONTHS[o.month].slice(1)+' '+o.year;
+    const orders=o.rows.length;
+    return {...o,name,orders,ticket:orders?o.value/orders:0};
+  });
+}
+
+function renderMonths(){
+  const rows=filtered(true); // ignora selector de semana
+  const ms=monthStats(rows);
+
+  /* KPIs: una tarjeta independiente por cada mes, con variación vs el mes anterior */
+  const chip=(cur,prev,money)=>{
+    if(prev===undefined||prev===null) return ''; // primer mes: sin comparación
+    const diff=cur-prev;
+    const pct=prev?diff/prev*100:null;
+    const cls=diff>0?'up':diff<0?'down':'flat';
+    const arrow=diff>0?'↑':diff<0?'↓':'→';
+    const abs=(diff>0?'+':'')+(money?fmtMoney(diff):fmtInt(diff));
+    return `<span class="pill ${cls}" title="${abs} vs mes anterior">${arrow} ${pct===null?'n/d':fmtPct(pct)}</span>`;
+  };
+  document.getElementById('mKpis').innerHTML = ms.length ? ms.map((x,i)=>{
+    const p=i>0?ms[i-1]:null;
+    const pl=maxBy(agg(x.rows,'platform'),o=>o.value);
+    const pd=maxBy(agg(x.rows,'product'),o=>o.value);
+    return `<div class="lcard" style="border-top-color:${pl?platColor(pl.key):'var(--primary)'}">
+      <div class="wkname">${x.name}</div>
+      <div class="row"><span>Valor</span><b>${fmtMoney(x.value)} ${chip(x.value,p?p.value:null,true)}</b></div>
+      <div class="row"><span>Unidades</span><b>${fmtInt(x.qty)} ${chip(x.qty,p?p.qty:null,false)}</b></div>
+      <div class="row"><span>Pedidos</span><b>${fmtInt(x.orders)} ${chip(x.orders,p?p.orders:null,false)}</b></div>
+      <div class="row"><span>Ticket promedio</span><b>${fmtMoney(x.ticket)} ${chip(x.ticket,p?p.ticket:null,true)}</b></div>
+      <div class="row"><span>Plataforma líder</span><b>${pl?`<span class="plat-tag"><i class="dot" style="background:${platColor(pl.key)}"></i>${pl.key}</span>`:'—'}</b></div>
+      <div class="row"><span>Producto líder</span><b style="font-size:12px">${pd?pd.key:'—'}</b></div>
+    </div>`;
+  }).join('') : '<div class="vcard">Sin datos en el período.</div>';
+  document.getElementById('mKpiRange').textContent=ms.length?ms[0].name+' → '+ms[ms.length-1].name+' · '+ms.length+' mes'+(ms.length>1?'es':''):'';
+
+  /* Gráfico de barras por mes */
+  const isV=mode.month==='value';
+  draw('chMonth','bar',{
+    labels:ms.map(x=>x.name),
+    datasets:[{
+      label:isV?'Valor vendido':'Unidades',
+      data:ms.map(x=>isV?x.value:x.qty),
+      backgroundColor:ms.map((_,i)=>i===ms.length-1?'#0F5C73':'#5C97A8'),
+      borderRadius:5,maxBarThickness:110
+    }]
+  },{
+    plugins:{legend:{display:false},
+      barValues:{fmt:v=>isV?fmtMoneyShort(v):fmtInt(v),font:14},
+      tooltip:{callbacks:{
+        label:c=>isV?'Valor: '+fmtMoney(c.raw):'Unidades: '+fmtInt(c.raw),
+        afterLabel:c=>{const x=ms[c.dataIndex];return ['Pedidos: '+fmtInt(x.orders),'Ticket: '+fmtMoney(x.ticket)];}
+      }}},
+    scales:{y:{beginAtZero:true,ticks:{callback:v=>isV?fmtMoneyShort(v):fmtInt(v)},grid:{color:'#EDF1F4'}},x:{grid:{display:false}}}
+  },[barValues]);
+
+  /* Variación entre meses */
+  const box=document.getElementById('mVarCards');
+  if(ms.length<2){
+    box.innerHTML='<div class="vcard"><h4>Sin comparación</h4><div class="vs">Se necesita al menos dos meses con datos.</div></div>';
+  }else{
+    const html=[];
+    for(let i=1;i<ms.length;i++){
+      const c=ms[i],p=ms[i-1];
+      html.push(`<div class="vcard">
+        <h4>${c.name} vs ${p.name}</h4>
+        <div class="vs">Mes contra mes</div>
+        ${metric('Valor vendido',c.value-p.value,p.value?((c.value-p.value)/p.value*100):null,true)}
+        ${metric('Unidades',c.qty-p.qty,p.qty?((c.qty-p.qty)/p.qty*100):null,false)}
+        ${metric('Ticket promedio',c.ticket-p.ticket,p.ticket?((c.ticket-p.ticket)/p.ticket*100):null,true)}
+      </div>`);
+    }
+    box.innerHTML=html.join('');
+  }
+
+  /* Comparativo de plataformas por mes */
+  const isVp=mode.mplat==='value';
+  const plats=agg(rows,'platform').sort((a,b)=>b.value-a.value).map(o=>o.key);
+  draw('chMonthPlat','bar',{
+    labels:ms.map(x=>x.name),
+    datasets:plats.map(p=>({
+      label:p,
+      data:ms.map(x=>{
+        const rs=x.rows.filter(r=>r.platform===p);
+        return isVp?rs.reduce((s,r)=>s+r.value,0):rs.reduce((s,r)=>s+r.qty,0);
+      }),
+      backgroundColor:platColor(p),borderRadius:4,maxBarThickness:54
+    }))
+  },{
+    plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'rectRounded',boxWidth:10,padding:14}},
+      tooltip:{callbacks:{label:c=>c.dataset.label+': '+(isVp?fmtMoney(c.raw):fmtInt(c.raw)+' und')}}},
+    scales:{y:{beginAtZero:true,ticks:{callback:v=>isVp?fmtMoneyShort(v):fmtInt(v)},grid:{color:'#EDF1F4'}},x:{grid:{display:false}}}
+  });
+
+  /* Tabla resumen mensual */
+  const t=document.getElementById('tblMonth');
+  const tot={v:0,q:0,o:0};
+  const bodyRows=ms.map((x,i)=>{
+    tot.v+=x.value;tot.q+=x.qty;tot.o+=x.orders;
+    const prev=i>0?ms[i-1]:null;
+    const dv=prev&&prev.value?((x.value-prev.value)/prev.value*100):null;
+    const pl=maxBy(agg(x.rows,'platform'),o=>o.value), pd=maxBy(agg(x.rows,'product'),o=>o.value);
+    const cls=dv===null?'flat':dv>0?'up':'down';
+    return `<tr>
+      <td><b>${x.name}</b></td>
+      <td class="n">${fmtMoney(x.value)}</td>
+      <td class="n ${cls}">${dv===null?'—':(dv>0?'↑ ':'↓ ')+fmtPct(dv)}</td>
+      <td class="n">${fmtInt(x.qty)}</td>
+      <td class="n">${fmtInt(x.orders)}</td>
+      <td class="n">${fmtMoney(x.ticket)}</td>
+      <td>${pl?`<span class="plat-tag"><i class="dot" style="background:${platColor(pl.key)}"></i>${pl.key}</span>`:'—'}</td>
+      <td>${pd?pd.key:'—'}</td>
+    </tr>`;
+  }).join('');
+  t.innerHTML=`<thead><tr>
+      <th>Mes</th><th class="n">Valor</th><th class="n">Var. %</th><th class="n">Unidades</th>
+      <th class="n">Pedidos</th><th class="n">Ticket promedio</th><th>Plataforma líder</th><th>Producto líder</th>
+    </tr></thead><tbody>${bodyRows||'<tr><td colspan="8">Sin datos</td></tr>'}</tbody>
+    <tfoot><tr><td>Total</td><td class="n">${fmtMoney(tot.v)}</td><td></td><td class="n">${fmtInt(tot.q)}</td>
+    <td class="n">${fmtInt(tot.o)}</td><td class="n">${fmtMoney(tot.o?tot.v/tot.o:0)}</td><td></td><td></td></tr></tfoot>`;
+}
+
+/* --- franja de semanas --- */
+function renderStrip(ws,rows){
+  const max=Math.max(...ws.map(w=>w.value),1);
+  const cur=document.getElementById('fWeek').value;
+  document.getElementById('weekstrip').innerHTML=ws.map(w=>`
+    <div class="wk ${cur==w.i?'active':''}" data-w="${w.i}" title="Clic para filtrar por ${w.name}">
+      <div class="lbl">${w.name}</div>
+      <div class="rng">${w.label}</div>
+      <div class="val">${fmtMoneyShort(w.value)}</div>
+      <div class="bar"><i style="width:${(w.value/max*100).toFixed(1)}%"></i></div>
+      <div class="rng">${fmtInt(w.qty)} und · ${fmtInt(w.orders)} pedidos</div>
+    </div>`).join('');
+  document.querySelectorAll('.wk').forEach(el=>el.onclick=()=>{
+    const f=document.getElementById('fWeek');
+    f.value = f.value==el.dataset.w ? '' : el.dataset.w;
+    render();
+  });
+}
+
+/* --- KPIs --- */
+function renderKPIs(rows,ws){
+  const value=rows.reduce((s,r)=>s+r.value,0);
+  const qty=rows.reduce((s,r)=>s+r.qty,0);
+  const orders=countOrders(rows);
+  const prods=agg(rows,'product'), plats=agg(rows,'platform');
+  const tp=maxBy(prods,o=>o.value), tl=maxBy(plats,o=>o.value);
+  const k=[
+    ['Valor total vendido',fmtMoney(value),'',''],
+    ['Total de unidades',fmtInt(qty),'',''],
+    ['Número de pedidos',fmtInt(orders),'','Registros del archivo'],
+    ['Ticket promedio',fmtMoney(orders?value/orders:0),'',(MAP.value||'Valor')+' ÷ registros'],
+    ['Producto líder del período',tp?tp.key:'—','sm',tp?fmtMoney(tp.value)+' · '+fmtInt(tp.qty)+' und':''],
+    ['Plataforma líder',tl?tl.key:'—','sm',tl?fmtMoney(tl.value)+' · '+(value?(tl.value/value*100).toFixed(1):0)+'% del total':'']
+  ];
+  document.getElementById('kpis').innerHTML=k.map(([a,b,c,d])=>`
+    <div class="kpi"><div class="k">${a}</div><div class="v ${c}">${b}</div>${d?`<div class="s">${d}</div>`:''}</div>`).join('');
+  const f=ws[0],l=ws[ws.length-1];
+  document.getElementById('kpiRange').textContent=f?`${dLabel(f.start)} → ${dLabel(l.end)} · ${ws.length} semana${ws.length>1?'s':''}`:'';
+}
+
+/* --- 1. gráfico semanal --- */
+function renderWeekChart(ws){
+  const isV=mode.week==='value';
+  draw('chWeek','bar',{
+    labels:ws.map(w=>[w.name,w.label]),
+    datasets:[{
+      label:isV?'Valor vendido':'Unidades',
+      data:ws.map(w=>isV?w.value:w.qty),
+      backgroundColor:ws.map((_,i)=>i===ws.length-1?'#0F5C73':'#5C97A8'),
+      borderRadius:5,maxBarThickness:96
+    }]
+  },{
+    plugins:{legend:{display:false},
+      barValues:{fmt:v=>isV?fmtMoneyShort(v):fmtInt(v),font:14},
+      tooltip:{callbacks:{
+      title:c=>ws[c[0].dataIndex].name+' · '+ws[c[0].dataIndex].label,
+      label:c=>(isV?'Valor: '+fmtMoney(c.raw):'Unidades: '+fmtInt(c.raw)),
+      afterLabel:c=>{const w=ws[c.dataIndex];return ['Pedidos: '+fmtInt(w.orders),'Ticket: '+fmtMoney(w.ticket)];}
+    }}},
+    scales:{y:{beginAtZero:true,ticks:{callback:v=>isV?fmtMoneyShort(v):fmtInt(v)},grid:{color:'#EDF1F4'}},
+      x:{grid:{display:false},ticks:{color:'#5B6B79',font:{size:12},padding:6}}}
+  },[barValues]);
+}
+
+/* --- 2. variación --- */
+function renderVariation(ws){
+  if(ws.length<2){document.getElementById('varCards').innerHTML='<div class="vcard"><h4>Sin comparación</h4><div class="vs">Se necesita al menos dos semanas con datos.</div></div>';return;}
+  const html=[];
+  for(let i=1;i<ws.length;i++){
+    const c=ws[i],p=ws[i-1];
+    html.push(`<div class="vcard">
+      <h4>${c.name} vs ${p.name}</h4>
+      <div class="vs">${c.label}</div>
+      ${metric('Valor vendido',c.value-p.value,p.value?((c.value-p.value)/p.value*100):null,true)}
+      ${metric('Unidades',c.qty-p.qty,p.qty?((c.qty-p.qty)/p.qty*100):null,false)}
+      ${metric('Ticket promedio',c.ticket-p.ticket,p.ticket?((c.ticket-p.ticket)/p.ticket*100):null,true)}
+    </div>`);
+  }
+  document.getElementById('varCards').innerHTML=html.join('');
+}
+function metric(label,diff,pct,money){
+  const cls=diff>0?'up':diff<0?'down':'flat';
+  const arrow=diff>0?'↑':diff<0?'↓':'→';
+  const val=(diff>0?'+':'')+(money?fmtMoney(diff):fmtInt(diff));
+  return `<div class="metric"><div class="m-k">${label}</div>
+    <div class="m-v ${cls}">${arrow} ${val}
+      <span class="pill ${cls}">${pct===null?'n/d':fmtPct(pct)}</span></div></div>`;
+}
+
+/* --- 3 y 4. productos líderes --- */
+function renderTopProducts(ws){
+  const byV=[],byU=[];
+  ws.forEach(w=>{
+    const p=agg(w.rows,'product');
+    const v=maxBy(p,o=>o.value), u=maxBy(p,o=>o.qty);
+    byV.push(card(w,v,'value'));
+    byU.push(card(w,u,'units'));
+  });
+  document.getElementById('topValue').innerHTML=byV.join('')||'<div class="vcard">Sin datos</div>';
+  document.getElementById('topUnits').innerHTML=byU.join('')||'<div class="vcard">Sin datos</div>';
+}
+function card(w,p,kind){
+  if(!p) return `<div class="lcard ${kind==='units'?'units':''}"><div class="wkname">${w.name}</div><div class="pname">Sin ventas</div></div>`;
+  const rowsA = kind==='value'
+    ? [['Valor vendido',fmtMoney(p.value)],['Cantidad',fmtInt(p.qty)+' und']]
+    : [['Cantidad',fmtInt(p.qty)+' und'],['Valor generado',fmtMoney(p.value)]];
+  return `<div class="lcard ${kind==='units'?'units':''}">
+    <div class="wkname">${w.name} · ${w.label}</div>
+    <div class="pname">${p.key}</div>
+    ${rowsA.map(([a,b])=>`<div class="row"><span>${a}</span><b>${b}</b></div>`).join('')}
+  </div>`;
+}
+
+/* --- 5. plataforma líder --- */
+function renderPlatformLeaders(ws){
+  document.getElementById('platLead').innerHTML=ws.map(w=>{
+    const p=agg(w.rows,'platform');
+    const v=maxBy(p,o=>o.value), u=maxBy(p,o=>o.qty);
+    if(!v) return `<div class="lcard"><div class="wkname">${w.name}</div><div class="pname">Sin ventas</div></div>`;
+    const tot=w.value||1;
+    return `<div class="lcard" style="border-top-color:${platColor(v.key)}">
+      <div class="wkname">${w.name} · ${w.label}</div>
+      <div class="pname"><span class="plat-tag"><i class="dot" style="background:${platColor(v.key)}"></i>${v.key}</span></div>
+      <div class="row"><span>Mayor valor</span><b>${fmtMoney(v.value)}</b></div>
+      <div class="row"><span>Participación</span><b>${(v.value/tot*100).toFixed(1)}%</b></div>
+      <div class="row"><span>Mayor unidades</span><b>${fmtInt(u.qty)} und</b></div>
+      <div class="row"><span></span><b style="font-size:12px;color:var(--muted)">${u.key}</b></div>
+    </div>`;
+  }).join('')||'<div class="vcard">Sin datos</div>';
+}
+
+/* --- 6. comparativo de plataformas --- */
+function renderPlatformChart(ws,rows){
+  const isV=mode.plat==='value';
+  const plats=agg(rows,'platform').sort((a,b)=>b.value-a.value).map(o=>o.key);
+  draw('chPlat','bar',{
+    labels:ws.map(w=>w.name),
+    datasets:plats.map(p=>({
+      label:p,
+      data:ws.map(w=>{
+        const rs=w.rows.filter(r=>r.platform===p);
+        return isV?rs.reduce((s,r)=>s+r.value,0):rs.reduce((s,r)=>s+r.qty,0);
+      }),
+      backgroundColor:platColor(p),borderRadius:4,maxBarThickness:46
+    }))
+  },{
+    plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'rectRounded',boxWidth:10,padding:14}},
+      barValues:{fmt:v=>isV?fmtMoneyShort(v):fmtInt(v),font:10},
+      tooltip:{callbacks:{label:c=>c.dataset.label+': '+(isV?fmtMoney(c.raw):fmtInt(c.raw)+' und')}}},
+    scales:{y:{beginAtZero:true,ticks:{callback:v=>isV?fmtMoneyShort(v):fmtInt(v)},grid:{color:'#EDF1F4'}},x:{grid:{display:false}}}
+  },[barValues]);
+}
+
+/* --- 7. participación --- */
+function renderParticipation(ws,rows){
+  const plats=agg(rows,'platform').sort((a,b)=>b.value-a.value);
+  document.getElementById('partBars').innerHTML=ws.map(w=>{
+    const p=agg(w.rows,'platform').sort((a,b)=>b.value-a.value);
+    const tot=w.value||1;
+    return `<div class="partrow">
+      <div class="ph"><span>${w.name}</span><span class="num" style="color:var(--muted)">${fmtMoney(w.value)}</span></div>
+      <div class="stack">${p.map(o=>{
+        const pc=o.value/tot*100;
+        return `<i style="width:${pc}%;background:${platColor(o.key)}" title="${o.key}: ${fmtMoney(o.value)} (${pc.toFixed(1)}%)">${pc>7?`<span>${pc.toFixed(0)}%</span>`:''}</i>`;
+      }).join('')}</div></div>`;
+  }).join('');
+  document.getElementById('partLegend').innerHTML=plats.map(o=>`<span><i class="dot" style="background:${platColor(o.key)}"></i>${o.key}</span>`).join('');
+  const tot=plats.reduce((s,o)=>s+o.value,0)||1;
+  draw('chDonut','doughnut',{
+    labels:plats.map(o=>o.key),
+    datasets:[{data:plats.map(o=>o.value),backgroundColor:plats.map(o=>platColor(o.key)),borderWidth:2,borderColor:'#fff'}]
+  },{
+    cutout:'58%',
+    plugins:{legend:{position:'right',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:9,padding:12,font:{size:12}}},
+      tooltip:{callbacks:{label:c=>c.label+': '+fmtMoney(c.raw)+' ('+(c.raw/tot*100).toFixed(1)+'%)'}}}
+  });
+}
+
+/* --- 9. tabla resumen --- */
+function renderTable(ws){
+  const t=document.getElementById('tblSum');
+  const tot={v:0,q:0,o:0};
+  const body=ws.map((w,i)=>{
+    tot.v+=w.value;tot.q+=w.qty;tot.o+=w.orders;
+    const prev=i>0?ws[i-1]:null;
+    const dv=prev&&prev.value?((w.value-prev.value)/prev.value*100):null;
+    const p=agg(w.rows,'platform'), pr=agg(w.rows,'product');
+    const pl=maxBy(p,o=>o.value), pd=maxBy(pr,o=>o.value);
+    const cls=dv===null?'flat':dv>0?'up':'down';
+    return `<tr>
+      <td><b>${w.name}</b><br><small style="color:var(--muted);font-family:var(--mono)">${w.label}</small></td>
+      <td class="n">${fmtMoney(w.value)}</td>
+      <td class="n ${cls}">${dv===null?'—':(dv>0?'↑ ':'↓ ')+fmtPct(dv)}</td>
+      <td class="n">${fmtInt(w.qty)}</td>
+      <td class="n">${fmtInt(w.orders)}</td>
+      <td class="n">${fmtMoney(w.ticket)}</td>
+      <td>${pl?`<span class="plat-tag"><i class="dot" style="background:${platColor(pl.key)}"></i>${pl.key}</span>`:'—'}</td>
+      <td>${pd?pd.key:'—'}</td>
+    </tr>`;
+  }).join('');
+  t.innerHTML=`<thead><tr>
+      <th>Semana</th><th class="n">Valor</th><th class="n">Var. %</th><th class="n">Unidades</th>
+      <th class="n">Pedidos</th><th class="n">Ticket promedio</th><th>Plataforma líder</th><th>Producto líder</th>
+    </tr></thead><tbody>${body}</tbody>
+    <tfoot><tr><td>Total</td><td class="n">${fmtMoney(tot.v)}</td><td></td><td class="n">${fmtInt(tot.q)}</td>
+    <td class="n">${fmtInt(tot.o)}</td><td class="n">${fmtMoney(tot.o?tot.v/tot.o:0)}</td><td></td><td></td></tr></tfoot>`;
+}
+
+/* --- tendencia diaria --- */
+function renderDaily(rows){
+  const isV=mode.day==='value';
+  const m=new Map();
+  rows.forEach(r=>{const k=iso(r.date);const o=m.get(k)||{v:0,q:0,d:r.date};o.v+=r.value;o.q+=r.qty;m.set(k,o);});
+  const keys=[...m.keys()].sort();
+  draw('chDay','line',{
+    labels:keys.map(k=>{const d=m.get(k).d;return DAYS[(d.getDay()-3+7)%7]+' '+dLabel(d);}),
+    datasets:[{
+      label:isV?'Valor':'Unidades',
+      data:keys.map(k=>isV?m.get(k).v:m.get(k).q),
+      borderColor:'#0F5C73',backgroundColor:'rgba(15,92,115,.10)',fill:true,tension:.3,
+      pointRadius:3,pointBackgroundColor:'#0F5C73',borderWidth:2
+    }]
+  },{
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>isV?fmtMoney(c.raw):fmtInt(c.raw)+' und'}}},
+    scales:{y:{beginAtZero:true,ticks:{callback:v=>isV?fmtMoneyShort(v):fmtInt(v)},grid:{color:'#EDF1F4'}},
+            x:{grid:{display:false},ticks:{maxRotation:60,minRotation:0,autoSkip:true,maxTicksLimit:14}}}
+  });
+}
+
+/* --- heatmap --- */
+function renderHeat(ws){
+  const dnames=weekDayNames();
+  const cells=[];let max=0;
+  ws.forEach(w=>{
+    const row=dnames.map((_,i)=>w.rows.filter(r=>r.dow===i).reduce((s,r)=>s+r.value,0));
+    row.forEach(v=>{if(v>max)max=v;});
+    cells.push({w,row});
+  });
+  max=max||1;
+  let html='<div class="hh"></div>'+dnames.map(d=>`<div class="hh">${d}</div>`).join('');
+  cells.forEach(c=>{
+    html+=`<div class="hr">${c.w.name}</div>`;
+    c.row.forEach((v,i)=>{
+      const t=v/max;
+      const bg=`rgba(15,92,115,${(0.06+t*0.86).toFixed(3)})`;
+      const d=new Date(c.w.start);d.setDate(d.getDate()+i);
+      html+=`<div class="cell" style="background:${bg};color:${t>0.55?'#fff':'#0B1A24'}" title="${dnames[i]} ${dLabel(d)}: ${fmtMoney(v)}">${v?fmtMoneyShort(v):'·'}</div>`;
+    });
+  });
+  document.getElementById('heat').innerHTML=html;
+}
+
+/* --- top 10 --- */
+function renderTop10(rows){
+  const w=document.getElementById('topWeek').value;
+  const rs=w?rows.filter(r=>r.w===+w):rows;
+  const p=agg(rs,'product').sort((a,b)=>b.value-a.value).slice(0,10);
+  const totV=rs.reduce((s,r)=>s+r.value,0)||1;
+  document.getElementById('tblTop').innerHTML=`<thead><tr>
+    <th style="width:34px">#</th><th>Producto</th><th class="n">Valor</th><th class="n">Und</th><th class="n">% total</th>
+    </tr></thead><tbody>${p.map((o,i)=>`<tr>
+      <td class="num" style="color:var(--muted)">${i+1}</td>
+      <td>${o.key}</td>
+      <td class="n">${fmtMoney(o.value)}</td>
+      <td class="n">${fmtInt(o.qty)}</td>
+      <td class="n">${(o.value/totV*100).toFixed(1)}%</td></tr>`).join('')||'<tr><td colspan="5">Sin datos</td></tr>'}</tbody>`;
+}
+
+/* --- alertas de crecimiento y caída --- */
+function renderAlerts(ws){
+  const box=document.getElementById('alerts');
+  if(ws.length<2){box.innerHTML='<div class="note">Se necesitan dos semanas con datos para comparar.</div>';return;}
+  const c=ws[ws.length-1], p=ws[ws.length-2];
+  const A=new Map(agg(c.rows,'product').map(o=>[o.key,o]));
+  const B=new Map(agg(p.rows,'product').map(o=>[o.key,o]));
+  const keys=new Set([...A.keys(),...B.keys()]);
+  const list=[];
+  keys.forEach(k=>{
+    const a=A.get(k)?.value||0, b=B.get(k)?.value||0;
+    const diff=a-b;
+    if(Math.abs(diff)<Math.max(c.value,p.value)*0.012) return; // ruido
+    list.push({k,a,b,diff,pct:b?diff/b*100:null});
+  });
+  list.sort((x,y)=>Math.abs(y.diff)-Math.abs(x.diff));
+  const items=list.slice(0,10);
+  box.innerHTML=items.length?items.map(o=>{
+    const cls=o.diff>0?'up':'down';
+    const bg=o.diff>0?'var(--up-soft)':'var(--down-soft)';
+    return `<div class="alertrow">
+      <span class="ic ${cls}" style="background:${bg}">${o.diff>0?'↑':'↓'} ${o.pct===null?'nuevo':fmtPct(o.pct)}</span>
+      <span class="tx">${o.k}
+        <small>${fmtMoney(o.b)} → ${fmtMoney(o.a)} · ${(o.diff>0?'+':'')}${fmtMoney(o.diff)}</small></span>
+    </div>`;
+  }).join(''):'<div class="note">Sin variaciones relevantes entre las dos últimas semanas.</div>';
+}
+
+/* --- plugin: valores dentro de las barras --- */
+const barValues={
+  id:'barValues',
+  afterDatasetsDraw(chart,args,opts){
+    if(!opts||!opts.fmt) return;
+    const ctx=chart.ctx;
+    const size=opts.font||12;
+    ctx.save();
+    ctx.font='600 '+size+'px ui-monospace, Menlo, Consolas, monospace';
+    ctx.textAlign='center';
+    chart.data.datasets.forEach((ds,di)=>{
+      const meta=chart.getDatasetMeta(di);
+      if(meta.hidden) return;
+      meta.data.forEach((el,i)=>{
+        const v=ds.data[i];
+        if(!v) return;
+        const txt=opts.fmt(v);
+        const alto=Math.abs((el.base??0)-el.y);
+        const ancho=el.width||0;
+        if(ctx.measureText(txt).width>ancho-6) return;   // no cabe a lo ancho
+        if(alto>=size+14){                                // cabe dentro de la barra
+          ctx.fillStyle='#fff';
+          ctx.textBaseline='top';
+          ctx.fillText(txt,el.x,el.y+7);
+        }else{                                            // barra muy baja: encima
+          ctx.fillStyle='#5B6B79';
+          ctx.textBaseline='bottom';
+          ctx.fillText(txt,el.x,el.y-3);
+        }
+      });
+    });
+    ctx.restore();
+  }
+};
+
+/* --- helper Chart.js --- */
+function draw(id,type,data,opts,plugins){
+  if(charts[id]) charts[id].destroy();
+  charts[id]=new Chart(document.getElementById(id),{
+    type,data,plugins:plugins||[],
+    options:Object.assign({
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      animation:{duration:window.matchMedia('(prefers-reduced-motion:reduce)').matches?0:450},
+      plugins:{tooltip:{backgroundColor:'#0B1A24',padding:11,titleFont:{size:12},bodyFont:{size:12},cornerRadius:7,boxPadding:4}}
+    },opts)
+  });
+}
+
+/* =========================================================
+   8. EXPORTACIÓN
+   ========================================================= */
+function exportXlsx(){
+  const rows=filtered(), ws=weekStats(rows).filter(w=>w.rows.length);
+  const wb=XLSX.utils.book_new();
+
+  const resumen=ws.map((w,i)=>{
+    const prev=i>0?ws[i-1]:null;
+    const pl=maxBy(agg(w.rows,'platform'),o=>o.value), pd=maxBy(agg(w.rows,'product'),o=>o.value);
+    return {
+      Semana:w.name, Desde:iso(w.start), Hasta:iso(w.end),
+      Valor:Math.round(w.value), Unidades:w.qty, Pedidos:w.orders,
+      'Ticket promedio':Math.round(w.ticket),
+      'Var. valor':prev?Math.round(w.value-prev.value):'',
+      'Var. valor %':prev&&prev.value?+((w.value-prev.value)/prev.value*100).toFixed(2):'',
+      'Var. unidades':prev?w.qty-prev.qty:'',
+      'Plataforma líder':pl?pl.key:'', 'Producto líder':pd?pd.key:''
+    };
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(resumen),'Resumen semanal');
+
+  const plat=[];
+  ws.forEach(w=>agg(w.rows,'platform').sort((a,b)=>b.value-a.value).forEach(o=>plat.push({
+    Semana:w.name,Plataforma:o.key,Valor:Math.round(o.value),Unidades:o.qty,
+    'Participación %':+(o.value/(w.value||1)*100).toFixed(2)
+  })));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(plat),'Plataformas');
+
+  const prod=[];
+  ws.forEach(w=>agg(w.rows,'product').sort((a,b)=>b.value-a.value).slice(0,20).forEach((o,i)=>prod.push({
+    Semana:w.name,Ranking:i+1,Producto:o.key,Valor:Math.round(o.value),Unidades:o.qty
+  })));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(prod),'Top productos');
+
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.map(r=>({
+    Fecha:iso(r.date),Semana:'Semana '+r.w,Día:DAYS[r.dow],Producto:r.product,Marca:r.brand,
+    Plataforma:r.platform,Unidades:r.qty,Valor:Math.round(r.value),Pedido:r.order
+  }))),'Detalle');
+
+  XLSX.writeFile(wb,'analisis_ventas_semanal.xlsx');
+}
+
+/* =========================================================
+   10. EVENTOS
+   ========================================================= */
+const fileInput=document.getElementById('file');
+const openFile=()=>fileInput.click();
+
+/* Mensaje visible ante cualquier fallo, no solo en consola */
+function showError(msg){
+  const w=document.getElementById('warn');
+  w.classList.remove('hidden');
+  w.style.background='#FBE9E7';w.style.borderColor='#E9B4AE';w.style.color='#8C2B22';
+  w.textContent=msg;
+  document.getElementById('dash').classList.remove('hidden');
+  w.scrollIntoView({block:'center'});
+}
+window.addEventListener('error',e=>showError('Error: '+(e.message||'fallo inesperado')));
+
+/* Lectura única para el botón y para arrastrar */
+function handleFile(f){
+  if(!f) return;
+  if(typeof XLSX==='undefined'){
+    showError('No se cargó la librería de lectura de Excel. Revisa tu conexión o abre el archivo en otro navegador.');
+    return;
+  }
+  if(!/\.(xlsx|xlsm|xls|csv)$/i.test(f.name)){
+    showError('Formato no soportado: '+f.name+'. Usa .xlsx, .xls o .csv.');
+    return;
+  }
+  const r=new FileReader();
+  r.onerror=()=>showError('No se pudo leer el archivo desde el disco.');
+  r.onload=ev=>{
+    try{ readWorkbook(new Uint8Array(ev.target.result),f.name); }
+    catch(err){ showError('No se pudo procesar el archivo: '+err.message); console.error(err); }
+  };
+  r.readAsArrayBuffer(f);
+}
+
+document.getElementById('btnLoad').onclick=openFile;
+document.getElementById('drop').onclick=openFile;
+document.getElementById('btnPdf').onclick=()=>window.print();
+document.getElementById('btnXls').onclick=()=>{if(ROWS.length)exportXlsx();else alert('Primero carga un archivo.');};
+document.getElementById('btnMap').onclick=()=>{
+  if(!HEADERS.length) return alert('Primero carga un archivo.');
+  document.getElementById('mapping').classList.toggle('hidden');
+};
+fileInput.onchange=e=>{handleFile(e.target.files[0]);fileInput.value='';};
+
+/* Arrastrar sobre la zona o sobre cualquier parte de la página */
+const drop=document.getElementById('drop');
+['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over');}));
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>{e.preventDefault();handleFile(e.dataTransfer.files[0]);});
+['fWeek','fPlat','fBrand','fFrom','fTo'].forEach(id=>document.getElementById(id).onchange=renderActive);
+document.getElementById('fProd').oninput=renderActive;
+document.getElementById('topWeek').onchange=()=>renderTop10(filtered());
+document.getElementById('btnReset').onclick=()=>{
+  ['fPlat','fBrand'].forEach(id=>[...document.getElementById(id).options].forEach(o=>o.selected=false));
+  document.getElementById('fWeek').value='';document.getElementById('fProd').value='';
+  document.getElementById('fFrom').value='';document.getElementById('fTo').value='';renderActive();
+};
+function bindToggle(id,key,fn){
+  document.querySelectorAll('#'+id+' .chip').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#'+id+' .chip').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');mode[key]=b.dataset.m;fn();
+  });
+}
+bindToggle('tgWeek','week',()=>renderWeekChart(weekStats(filtered()).filter(w=>w.rows.length)));
+bindToggle('tgPlat','plat',()=>{const r=filtered();renderPlatformChart(weekStats(r).filter(w=>w.rows.length),r);});
+bindToggle('tgDay','day',()=>renderDaily(filtered()));
+bindToggle('tgMonth','month',renderMonths);
+bindToggle('tgMonthPlat','mplat',renderMonths);
+
+/* --- pestañas --- */
+document.querySelectorAll('#tabs .tab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  activeTab=b.dataset.pane;
+  const wk=activeTab==='week';
+  document.getElementById('paneWeek').classList.toggle('hidden',!wk);
+  document.getElementById('paneMonth').classList.toggle('hidden',wk);
+  // el filtro de semana no aplica a la vista mensual
+  document.getElementById('fWeekWrap').classList.toggle('hidden',!wk);
+  renderActive(); // se dibuja con el panel ya visible (canvas con tamaño correcto)
+});
+</script>
+</body>
+</html>
