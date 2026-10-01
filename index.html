@@ -111,9 +111,9 @@ section{margin-bottom:22px}
 .f select[multiple]{height:96px}
 
 /* ---------- sección de filtros: cuadrícula ordenada ---------- */
-.filters.filters-grid{grid-template-columns:repeat(6,minmax(0,1fr));align-items:start;gap:14px 12px}
+.filters.filters-grid{grid-template-columns:repeat(7,minmax(0,1fr));align-items:start;gap:14px 12px}
 .filters-grid .f > select,.filters-grid .f > input,.filters-grid .ms-btn{height:38px;box-sizing:border-box}
-@media (max-width:1180px){.filters.filters-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:1280px){.filters.filters-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (max-width:720px){.filters.filters-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:460px){.filters.filters-grid{grid-template-columns:1fr}}
 
@@ -132,6 +132,20 @@ section{margin-bottom:22px}
 .f .ms-item input{width:auto;padding:0;margin:0;flex:0 0 auto}
 .f .ms-item small{margin-left:auto;padding-left:12px;white-space:nowrap;color:var(--muted);font-family:var(--mono);font-size:11px}
 .ms-empty{color:var(--muted);font-size:12px;padding:6px 4px}
+
+/* ---------- secciones que se contraen ---------- */
+.collapse-head{cursor:pointer;user-select:none;margin-bottom:0}
+.collapse-head.open{margin-bottom:12px}
+.collapse-head .cat-caret{display:inline-block;transition:transform .15s;color:var(--muted)}
+.collapse-head.open .cat-caret{transform:rotate(90deg)}
+.collapse-hint{font-size:12px;color:var(--primary);font-weight:600}
+.collapse-head:focus-visible{outline:2px solid var(--primary);outline-offset:4px;border-radius:4px}
+
+/* ---------- categorías: filas desplegables ---------- */
+tr.cat-row{cursor:pointer}
+tr.cat-row .cat-caret{display:inline-block;transition:transform .15s;color:var(--muted)}
+tr.cat-row.open .cat-caret{transform:rotate(90deg)}
+tr.sub-row td{font-size:12px;background:#FAFCFD}
 
 /* ---------- tabs ---------- */
 .tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--line);flex-wrap:wrap}
@@ -329,6 +343,17 @@ tfoot td{font-weight:700;border-top:2px solid var(--line);background:#F8FAFB}
               </div>
             </div>
           </div>
+          <div class="f"><label>Categoría</label>
+            <select id="fCat" multiple hidden></select>
+            <div class="ms" id="fCatMs">
+              <button type="button" class="ms-btn" id="fCatBtn"><span id="fCatLbl">Todas las categorías</span><span aria-hidden="true">▾</span></button>
+              <div class="ms-panel">
+                <input type="search" id="fCatSearch" placeholder="Buscar categoría…">
+                <div class="ms-actions"><button type="button" id="fCatAll">Marcar las visibles</button><button type="button" id="fCatNone">Limpiar</button></div>
+                <div class="ms-list" id="fCatList"></div>
+              </div>
+            </div>
+          </div>
           <div class="f"><label>Producto contiene</label><input type="search" id="fProd" placeholder="ej. router, TP-Link"></div>
           <div class="f"><label>Desde</label><input type="date" id="fFrom"></div>
           <div class="f"><label>Hasta</label><input type="date" id="fTo"></div>
@@ -483,6 +508,30 @@ tfoot td{font-weight:700;border-top:2px solid var(--line);background:#F8FAFB}
       </div>
     </section>
 
+
+    <!-- VENTAS POR CATEGORÍA (versión 1) -->
+    <section>
+      <div class="sec-head"><span class="sec-num">CT</span><h2>Ventas por categoría</h2><p>Categoría detectada en la columna Notas ítem. Haz clic en una categoría para ver sus subcategorías.</p></div>
+      <div class="card">
+        <div class="sec-head"><h2>Categorías más vendidas</h2><p id="catRange"></p></div>
+        <div class="tablewrap"><table id="tblCats"></table></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="sec-head collapse-head" data-target="tblCatsSubsWrap" role="button" tabindex="0" aria-expanded="false" title="Clic para mostrar u ocultar la tabla">
+          <h2><span class="cat-caret">▸</span> Ventas por subcategoría</h2><p id="subRange"></p>
+          <span class="spacer"></span><span class="collapse-hint">Mostrar</span></div>
+        <div class="tablewrap hidden" id="tblCatsSubsWrap"><table id="tblCatsSubs"></table></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="sec-head"><h2>Categoría más vendida por semana</h2><p>Top 3 por valor.</p></div>
+        <div class="cards" id="catWeek" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))"></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="sec-head"><h2>Categoría más vendida por plataforma y semana</h2><p>Categoría líder por valor en cada cruce. La última columna es el período completo.</p></div>
+        <div class="tablewrap"><table id="tblCatMatrix"></table></div>
+      </div>
+    </section>
+
     </div><!-- /paneWeek -->
 
     <!-- ======================= PESTAÑA MENSUAL ======================= -->
@@ -552,7 +601,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line);background:#F8FAFB}
           <div class="tablewrap"><table id="mTblBrands"></table></div>
         </div>
         <div class="card" style="margin-top:16px">
-          <div class="sec-head"><h2>Marca más vendida por mes</h2><p>Top 3 por valor.</p></div>
+          <div class="sec-head"><h2>Marca más vendida por mes</h2><p>Top 10 por valor.</p></div>
           <!-- una sola fila: si hay muchos meses, se desplaza horizontalmente -->
           <div class="cards" id="mBrandMonth" style="grid-auto-flow:column;grid-auto-columns:minmax(240px,1fr);grid-template-columns:none;overflow-x:auto;padding-bottom:4px"></div>
         </div>
@@ -568,6 +617,30 @@ tfoot td{font-weight:700;border-top:2px solid var(--line);background:#F8FAFB}
           <div class="tablewrap"><table id="mTblTop"></table></div>
         </div>
       </section>
+
+
+    <!-- VENTAS POR CATEGORÍA (versión 1) -->
+    <section>
+      <div class="sec-head"><span class="sec-num">CT</span><h2>Ventas por categoría</h2><p>Categoría detectada en la columna Notas ítem. Haz clic en una categoría para ver sus subcategorías.</p></div>
+      <div class="card">
+        <div class="sec-head"><h2>Categorías más vendidas</h2><p id="mCatRange"></p></div>
+        <div class="tablewrap"><table id="mTblCats"></table></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="sec-head collapse-head" data-target="mTblCatsSubsWrap" role="button" tabindex="0" aria-expanded="false" title="Clic para mostrar u ocultar la tabla">
+          <h2><span class="cat-caret">▸</span> Ventas por subcategoría</h2><p id="mSubRange"></p>
+          <span class="spacer"></span><span class="collapse-hint">Mostrar</span></div>
+        <div class="tablewrap hidden" id="mTblCatsSubsWrap"><table id="mTblCatsSubs"></table></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="sec-head"><h2>Categoría más vendida por mes</h2><p>Top 10 por valor.</p></div>
+        <div class="cards" id="mCatMonth" style="grid-auto-flow:column;grid-auto-columns:minmax(240px,1fr);grid-template-columns:none;overflow-x:auto;padding-bottom:4px"></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="sec-head"><h2>Categoría más vendida por plataforma y mes</h2><p>Categoría líder por valor en cada cruce. La última columna es el período completo.</p></div>
+        <div class="tablewrap"><table id="mTblCatMatrix"></table></div>
+      </div>
+    </section>
 
     </div><!-- /paneMonth -->
 
@@ -751,10 +824,131 @@ function detectBrand(text){
   return best?best.name:'Generico';
 }
 
+/* =========================================================
+   CATEGORÍAS DE PRODUCTO (versión 1, para ir mejorando)
+   - Se detectan en la columna Notas ítem con palabras clave.
+   - Gana el tipo de producto que aparece PRIMERO en la descripción
+     ("Tablet + Funda" → Tablets; "Soporte de Volante" → Accesorios).
+   - Lo que va justo después de "para " no cuenta: describe para qué sirve,
+     no qué es ("Guaya para Monitor", "Repuesto para Aspiradora").
+     Empate: la coincidencia más larga; luego el orden de esta lista.
+   - Para ajustar: agregar o editar filas [Categoría, Subcategoría, palabras].
+   ========================================================= */
+const CATEGORY_RULES=[
+  ["Movilidad eléctrica","Accesorios para scooter","(casco|helmet|guantes?|rodilleras?|coderas?|guardabarros|llantas?|neumaticos?|(asiento|seat|bolso|bolsa|maleta|alforja|candado|cargador|soporte|luz|luces|timbre|kit|camara de aire|repuesto)(?=.*(scooter|patineta))|(electric )?(scooter|patineta)(?=.*\\b(seat|asiento|casco|guantes?|bolso|bolsa|cargador|candado|llantas?|neumaticos?|guardabarros|camara de aire)\\b))"],
+  ["Accesorios","Soportes y bases","(soporte|base(?! de carga)|brazo|tripode|monopod|selfie stick|adaptador vesa|estabilizador de celular|gimbal|mesa para (timon|volante)|kit de aspas|boton bluetooth)"],
+  ["Accesorios","Fundas y estuches","(funda|estuche|carcasa|keyboard case|folio case|forro|vidrio templado|mica|silicona protectora|protector de teclado)"],
+  ["Accesorios","Morrales y maletines","(morral|mochila|backpack|maletin|bolso|sleeve)"],
+  ["Accesorios","Mouse pad y reposamuñecas","(pad mouse|mouse ?pad|alfombrilla|desk mat|powerplay|reposa ?munecas|apoya ?munecas)"],
+  ["Accesorios","Seguridad para equipos","(guaya|cable de seguridad|candado para portatil)"],
+  ["Accesorios","Lápices y stylus","(stylus|lapiz optico|pencil)"],
+  ["Accesorios","Repuestos aspiradora","(bolsa desechable|bolsa para polvo|filtro hepa|cepillo lateral|kit de (repuestos|accesorios) .*aspiradora|mopa)"],
+  ["Gaming","Volantes y simuladores","(volante|timon|palanca de cambios|shifter|pedales)"],
+  ["Gaming","Controles y adaptadores","(gamepad|control (inalambrico|para|de juego|gamer|xbox|ps\\d)|joystick|adaptador teclado y mouse para consolas)"],
+  ["Mobiliario y ergonomía","Sillas","silla"],
+  ["Mobiliario y ergonomía","Escritorios y muebles","(escritorio motorizado|escritorio gamer|escritorio elevable|estante|mueble|descansapies|reposapies)"],
+  ["Energía","UPS y reguladores","(ups|regulador|estabilizador(?! de celular)|supresor|multitoma|protector de voltaje)"],
+  ["Energía","Generadores y baterías","(generador|planta electrica|bateria sellada|pilas?\\b|bateria de litio|alcalinas)"],
+  ["Energía","Power banks","(power ?bank|powerbank|bateria externa|cargador portatil)"],
+  ["Energía","Cargadores","(cargador|base de carga|charging (pad|stand)|carga inalambrica|magsafe)"],
+  ["Redes","Cableado de red","(cable (rj45|utp|de red|fibra)|patch cord|fibra optica|cable cat|conector de red|rj45 cat)"],
+  ["Periféricos","Receptores USB","receptor[^,]*(bolt|unifying)"],
+  ["Redes","Adaptadores WiFi, Ethernet y Bluetooth","(adaptador|receptor|tarjeta convertidor)(?![^,]*(\\d en 1|\\+ ?\\d? ?(usb|hdmi|rj45|sd|vga)))(?=[^,]*(wifi|ethernet|rj45|red lan|bluetooth|inalambrico n|n150|n300|ac600|pci))"],
+  ["Gaming","Volantes y simuladores","adaptador de carreras"],
+  ["Accesorios","Hubs y adaptadores USB-C","(hub|dock|adaptador(?=[^,]*(\\d en 1|\\+|usb-?c|tipo c|thunderbolt)))"],
+  ["Accesorios","Cables de audio y video","(cable[^,]*(hdmi|display ?port|vga)|(cable )?(adaptador|convertidor|conversor)(?![^,]*(\\d en 1|\\+ ?\\d? ?(usb|hdmi|rj45|sd|vga)))[^,]*(hdmi|display ?port|vga|audio|rca|optico))"],
+  ["Energía","Cables de carga y datos","(cable(?!.*(power ?bank|bateria externa))|adaptador|convertidor|conversor)"],
+  ["Movilidad eléctrica","Scooters","(scooter|patineta)(?!.*\\b(seat|asiento|casco|helmet|guantes?|bolso|bolsa|cargador|candado|llantas?|neumaticos?|guardabarros|camara de aire)\\b)"],
+  ["Hogar","Aspiradoras","(aspiradora|vacuum)"],
+  ["Hogar","Cocina","(asador|grill|sanduchera|waflera|lonchera|gramera|freidora|licuadora|cafetera|olla|hervidor|tostadora)"],
+  ["Hogar","Clima","(calefactor|calentador|ventilador|purificador|humidificador|aire acondicionado)"],
+  ["Hogar","Cuidado personal","(afeitar|afeitadora|shaver|secador|plancha de pelo|plancha de ropa|cortapelo|bascula)"],
+  ["Hogar","Herramientas","(destornillador|screwdriver|compresor|inflador|taladro)"],
+  ["Celulares","Celulares","(celular(?! s03)|smartphone)"],
+  ["Tablets","Tablets","(tablet(?!s\\b)|redmi pad|galaxy tab)"],
+  ["Wearables","Smartwatch y bandas","(smartwatch|watch|reloj|smart band|mi band|band \\d|pulsera)"],
+  ["Wearables","Localizadores","(localizador|rastreador|rasteador|mototag|airtag)"],
+  ["Computadores","Portátiles","(portatil|portatl|laptop|notebook)(?=.*(ssd|ram|core|i3|i5|i7|ryzen|win))"],
+  ["Computadores","Monitores","monitor(?!es)"],
+  ["Computadores","Componentes PC","(gabinete|chasis|fuente de poder|memoria ram|tarjeta (grafica|de video|madre)|procesador|disipador)"],
+  ["Impresión y punto de venta","Impresoras y consumibles","(impresora|toner|tinta|cartucho|cinta rotuladora|papel fotografico|papel termico|rollo de papel)"],
+  ["Impresión y punto de venta","Punto de venta","(cajon monedero|lector de barras|lector / escaner|escaner|codigo de barras)"],
+  ["Almacenamiento","Tarjetas micro SD","(micro ?sd|sdxc|sdhc|sqxc|tarjeta de memoria)"],
+  ["Almacenamiento","Memorias USB","(memoria usb|memoria flash|unidad flash|usb flash|pendrive|flash drive|datatraveler)"],
+  ["Almacenamiento","Cajas externas","caja externa"],
+  ["Almacenamiento","Discos y SSD","(ssd|disco duro|disco externo|disco solido|hdd)"],
+  ["Almacenamiento","Unidades ópticas","unidad quemadora"],
+  ["Seguridad y smart home","Cámaras de seguridad","(camara (ip|de seguridad|seguridad|wifi|exterior|interior|robotica|de vigilancia)|video portero|mirilla|tapo c\\d+|vigi c\\d+|timbre)"],
+  ["Seguridad y smart home","Smart home","(smart plug|enchufe inteligente|bombillo|foco inteligente|tira led|cerradura inteligente|alarma|sensor de (movimiento|contacto|puerta)|motion sensor|panel solar)"],
+  ["Redes","Redes y WiFi","(router|repetidor|extensor|mesh|deco\\b|malla|switch(?=.*(puertos|gigabit|poe|administrable))|access point|punto (de )?acceso|adaptador (usb )?(wifi|pci|inalambrico)|modem|powerline|tarjeta de red|antena)"],
+  ["Periféricos","Combos teclado y mouse","combo(?=.*(teclado|mouse))"],
+  ["Periféricos","Teclados","teclado"],
+  ["Periféricos","Mouse","(mouse|mouser)"],
+  ["Periféricos","Cámaras web","(webcam|camara web|brio|c92\\d)"],
+  ["Periféricos","Tabletas digitalizadoras","(tabla digitalizadora|pen display)"],
+  ["Periféricos","Presentadores","presentador"],
+  ["Streaming","Captura e iluminación","(capturadora|luz led|litra|ring light|aro de luz)"],
+  ["Audio","Audífonos","(audifonos?|auriculares?|diadema|diadedema|headset|in ear|buds|manos libres|earbuds)"],
+  ["Audio","Parlantes y barras de sonido","(parlantes?|altavoz|altavoces|barra de sonido|soundbar|partybox|sistema de sonido|sound party)"],
+  ["Audio","Micrófonos","microfon"],
+  ["Audio","Radios y receptores","(radio|receptor de audio)"],
+  ["TV y video","TV, streaming y proyectores","(tv box|tv stick|chromecast|fire tv|televisor|smart tv|proyector)"],
+  ["Hogar","Limpieza","(gel antibacterial|alcohol|limpiador|toallas)"],
+];
+/* Excepciones por Referencia: ganan sobre las reglas. Agregar aquí los casos raros. */
+const CATEGORY_EXCEPTIONS={
+  '6950376725752':['Periféricos','Teclados','Teclado'],     // Redragon K512W (la descripción no dice "teclado")
+  'AE-DC5013-F6': ['Accesorios','Accesorios para vehículo','Cámara para carro']  // Hikvision Dashcam F6
+};
+const CATEGORY_RX=CATEGORY_RULES.map(([cat,sub,x],pri)=>({cat,sub,pri,rx:new RegExp('(?<![a-z0-9])(?:'+x+')','g')}));
+/* Nombre corto de la palabra clave que ubicó el producto en su subcategoría */
+const TERM_ACCENTS={audifonos:'audífonos',audifono:'audífono',camara:'cámara',microfono:'micrófono',bascula:'báscula',portatil:'portátil',
+  bateria:'batería',electrica:'eléctrica',inalambrico:'inalámbrico',lapiz:'lápiz',timon:'timón',maletin:'maletín',cajon:'cajón',
+  escaner:'escáner',codigo:'código',fotografico:'fotográfico',termico:'térmico',optico:'óptico',ergonomica:'ergonómica',
+  ergonomico:'ergonómico',munecas:'muñecas',robotica:'robótica',descansapies:'descansapiés',tripode:'trípode',deco:'deco'};
+/* Variantes, plurales y errores de escritura que se muestran con un solo nombre */
+const TERM_SAME={'diadedema':'diadema','pilas':'pila','parlantes':'parlante','altavoces':'altavoz','microfon':'micrófono',
+  'portatl':'portátil','microsd':'micro SD','micro sd':'micro SD','sdxc':'micro SD','sqxc':'micro SD','apoyamunecas':'reposamuñecas',
+  'reposamunecas':'reposamuñecas','boton bluetooth':'botón bluetooth','ssd':'SSD','ups':'UPS','tv box':'TV box','tv stick':'TV stick',
+  'punto':'punto de acceso','punto acceso':'punto de acceso','access point':'punto de acceso','sistema':'sistema de sonido',
+  'barra':'barra de sonido','soundbar':'barra de sonido','camara seguridad':'cámara de seguridad','adaptador teclado y':'adaptador teclado y mouse',
+  'receptor usb logi':'receptor USB','receptor usb logitech':'receptor USB','mi band':'smart band','vacuum':'aspiradora',
+  'cable adaptador thunderbolt':'cable thunderbolt','motion sensor':'sensor','screwdriver':'destornillador','mesh':'malla','deco':'malla'};
+function termLabel(t){
+  t=String(t||'').replace(/\b(tapo|vigi) c\d+\w*/,'cámara $1').trim();
+  t=t.split(/ \/ | a | de | para |, /)[0].split(' ').slice(0,3).join(' ');
+  t=TERM_SAME[t]||t;
+  t=t.split(' ').map(w=>TERM_ACCENTS[w]||w).join(' ');
+  return t.charAt(0).toUpperCase()+t.slice(1);
+}
+function detectCategory(text,ref){
+  const ex=CATEGORY_EXCEPTIONS[String(ref??'').trim()];
+  if(ex) return {cat:ex[0],sub:ex[1],term:ex[2]||'(asignado por referencia)'};
+  const t=norm(text).replace(/\s+/g,' ');
+  let best=null;
+  CATEGORY_RX.forEach(c=>{
+    let m=null, mm; c.rx.lastIndex=0;
+    while((mm=c.rx.exec(t))){
+      if(t.slice(Math.max(0,mm.index-5),mm.index)!=='para '){m=mm;break;}
+      if(!mm[0].length) c.rx.lastIndex++;
+    }
+    if(!m) return;
+    const key=[m.index,-m[0].length,c.pri];
+    if(!best||key[0]<best.key[0]||(key[0]===best.key[0]&&(key[1]<best.key[1]||(key[1]===best.key[1]&&key[2]<best.key[2]))))
+      best={key,cat:c.cat,sub:c.sub,term:m[0]};
+  });
+  /* "Electric Scooter … Seat": el nombre lo da la pieza del scooter, no la palabra "scooter" */
+  if(best && best.sub==='Accesorios para scooter' && /^(electric )?(scooter|patineta)$/.test(best.term)){
+    const pz=t.match(/\b(seat|asiento)\b/); if(pz) best.term='asiento';
+  }
+  return best?{cat:best.cat,sub:best.sub,term:termLabel(best.term)}:{cat:'Sin categoría',sub:'Sin categoría',term:'(sin coincidencia)'};
+}
+
 function autoMap(){
   const find=(re,exclude)=>HEADERS.find(h=>re.test(norm(h))&&(!exclude||!exclude.test(norm(h))));
   MAP={
     notes: find(/notas?\s*(de\s*)?item/) || HEADERS[2] || '',
+    ref:   find(/referencia|^ref\b|sku|^ean|codigo/) || '',
     date:  find(/fecha|date|dia\b|día|creaci|emisi/) || HEADERS[0],
     product: find(/producto|articulo|item|descripcion|titulo|nombre|sku.*nombre/) || find(/sku|referencia/) || HEADERS[1],
     brand: find(/marca|brand|fabricante/) || '',
@@ -766,7 +960,7 @@ function autoMap(){
 }
 
 function buildMapUI(){
-  const fields=[['date','Fecha'],['product','Producto'],['brand','Marca'],['qty','Cantidad'],['value','Valor'],['platform','Plataforma'],['order','Pedido / orden'],['notes','Notas ítem (marca)']];
+  const fields=[['date','Fecha'],['product','Producto'],['brand','Marca'],['qty','Cantidad'],['value','Valor'],['platform','Plataforma'],['order','Pedido / orden'],['notes','Notas ítem (marca)'],['ref','Referencia']];
   document.getElementById('mapFields').innerHTML=fields.map(([k,l])=>`
     <div class="f"><label>${l}</label><select data-map="${k}">
       <option value="">— sin columna —</option>
@@ -833,7 +1027,8 @@ const PLATFORM_GROUPS={
   'DIDI':['DID-DIDI'],
   'ÉXITO':['ÉXITO-ALMACENES ÉXITO'],
   'LOGITECH STORE WHATSAPP':['LOGI-WH-LOGITECH STORE WHATSAPP'],
-  'NEGOCIACIONES':['NEGOCIO-NEGOCIACIONES']
+  'NEGOCIACIONES':['NEGOCIO-NEGOCIACIONES'],
+  'HOMECENTER':['HOME-HOMECENTER']
 };
 /* Plataformas que no se tienen en cuenta en ningún cálculo */
 const PLATFORM_EXCLUDED=['GTA-GARANTÍA'];
@@ -863,6 +1058,14 @@ function process(){
     const d=parseDate(r[MAP.date]);
     if(!d){noDate++;return;}
     if(isExcludedPlatform(r[MAP.platform])){noExcl++;return;} // GTA-GARANTÍA no se tiene en cuenta
+    // DOMICILIO no es un producto: no entra en ningún cálculo
+    const desc=(MAP.notes?r[MAP.notes]:r[MAP.product])??'';
+    if(norm(desc).replace(/\s+/g,' ')==='domicilio'||norm(r[MAP.product]??'').replace(/\s+/g,' ')==='domicilio') return;
+    // la bolsa ecológica es un empaque, no un producto: tampoco entra en ningún cálculo
+    if(/bolsa ecologica/.test(norm(desc))) return;
+    // registros con valor de $1 a $1.000 (obsequios) no entran en ningún cálculo
+    const valRaw=MAP.value?parseNum(r[MAP.value]):0;
+    if(valRaw>0 && valRaw<=1000) return;
     const plat=unifyPlatform(r[MAP.platform]);
     if(!plat){noPlat++;return;} // registros sin plataforma no se tienen en cuenta
     const qty=MAP.qty?parseNum(r[MAP.qty]):1;
@@ -875,6 +1078,7 @@ function process(){
       qty: qty||0, value: val||0,
       order: MAP.order?String(r[MAP.order]??''):'',
       brandG: detectBrand(MAP.notes?r[MAP.notes]:''),
+      ...(()=>{const c=detectCategory(MAP.notes?r[MAP.notes]:'',MAP.ref?r[MAP.ref]:'');return {catG:c.cat,subG:c.cat+' › '+c.sub,catTerm:c.term};})(),
       mkey: d.getFullYear()*12+d.getMonth(),
       monthName: MONTHS[d.getMonth()].charAt(0).toUpperCase()+MONTHS[d.getMonth()].slice(1)+' '+d.getFullYear()
     });
@@ -909,6 +1113,7 @@ function buildFilters(){
   fw.innerHTML='<option value="">Todas las semanas</option>'+WEEKS.map(w=>`<option value="${w.i}">${w.name} · ${w.label}</option>`).join('');
   document.getElementById('fPlat').innerHTML=uniq('platform').map(p=>`<option value="${p.replace(/"/g,'&quot;')}">${p}</option>`).join('');
   document.getElementById('fBrand').innerHTML=uniq('brandG').map(p=>`<option value="${p.replace(/"/g,'&quot;')}">${p}</option>`).join('');
+  document.getElementById('fCat').innerHTML=uniq('catG').map(p=>`<option value="${p.replace(/"/g,'&quot;')}">${p}</option>`).join('');
   MONTH_ORDER=new Map(); ROWS.forEach(r=>MONTH_ORDER.set(r.monthName,r.mkey));
   document.getElementById('fMonth').innerHTML=[...MONTH_ORDER.keys()].sort((a,b)=>MONTH_ORDER.get(a)-MONTH_ORDER.get(b))
     .map(m=>`<option value="${m}">${m}</option>`).join('');
@@ -927,10 +1132,10 @@ function rebuildWeekSelect(){
   if([...fw.options].some(o=>o.value===cur)) fw.value=cur;
   if([...tw.options].some(o=>o.value===curTop)) tw.value=curTop;
 }
-function filtered(ignoreWeek,ignoreBrand,ignorePlat,ignoreMonth){
+function filtered(ignoreWeek,ignoreBrand,ignorePlat,ignoreMonth,ignoreCat){
   const wk=document.getElementById('fWeek').value;
   const months=sel('fMonth'); // el filtro de mes solo aplica en la pestaña mensual (ignoreWeek=true)
-  const plats=sel('fPlat'), brands=sel('fBrand');
+  const plats=sel('fPlat'), brands=sel('fBrand'), cats=sel('fCat');
   const q=norm(document.getElementById('fProd').value);
   const from=document.getElementById('fFrom').value?parseDate(document.getElementById('fFrom').value):null;
   const to=document.getElementById('fTo').value?parseDate(document.getElementById('fTo').value):null;
@@ -939,6 +1144,7 @@ function filtered(ignoreWeek,ignoreBrand,ignorePlat,ignoreMonth){
     if(ignoreWeek && !ignoreMonth && months.length && !months.includes(r.monthName)) return false;
     if(!ignorePlat && plats.length && !plats.includes(r.platform)) return false;
     if(!ignoreBrand && brands.length && !brands.includes(r.brandG)) return false;
+    if(!ignoreCat && cats.length && !cats.includes(r.catG)) return false;
     if(q && !norm(r.product).includes(q)) return false;
     if(from && r.date<from) return false;
     if(to && r.date>to) return false;
@@ -1003,38 +1209,52 @@ function render(){
   renderTop10(rows);
   renderAlerts(active);
   renderBrands(active,rows);
+  renderBrands(active,rows,{range:'catRange',tbl:'tblCats',per:'catWeek',matrix:'tblCatMatrix',
+    field:'catG',label:'Categoría',one:'categoría',many:'categorías',limit:50,subField:'subG'});
+  renderSubcats(rows,'tblCatsSubs','subRange');
 }
 
 /* --- ventas por marca --- */
 /* opt permite reutilizar la sección en la pestaña mensual (mismos cálculos, otros contenedores) */
 function renderBrands(ws,rows,opt){
-  opt=Object.assign({range:'brandRange',tbl:'tblBrands',per:'brandWeek',matrix:'tblBrandMatrix',unit:'de la semana'},opt);
+  opt=Object.assign({range:'brandRange',tbl:'tblBrands',per:'brandWeek',matrix:'tblBrandMatrix',unit:'de la semana',
+    field:'brandG',label:'Marca',one:'marca',many:'marcas',limit:15,subField:null,topN:3,showLead:true},opt);
+  const F=opt.field;
   const totV=rows.reduce((s,r)=>s+r.value,0)||1;
 
+  /* filas de subcategoría (ocultas hasta hacer clic en la categoría) */
+  const subRows=(key,i)=>{
+    const rs=rows.filter(r=>r[F]===key), tv=rs.reduce((s,r)=>s+r.value,0)||1;
+    return agg(rs,opt.subField).sort((a,b)=>b.value-a.value).map(s=>`<tr class="sub-row hidden" data-p="${opt.tbl}-${i}">
+      <td></td><td style="padding-left:28px;color:var(--muted)">${String(s.key).split(' › ').pop()}</td>
+      <td class="n">${fmtMoney(s.value)}</td><td class="n">${fmtInt(s.qty)}</td><td class="n">${fmtInt(s.n)}</td>
+      <td class="n" style="color:var(--muted)">${(s.value/tv*100).toFixed(1)}% de la cat.</td></tr>`).join('');
+  };
+
   /* 1. Ranking de marcas del período */
-  const all=agg(rows,'brandG').sort((a,b)=>b.value-a.value);
+  const all=agg(rows,F).sort((a,b)=>b.value-a.value);
   const maxV=all.length?all[0].value:1;
-  document.getElementById(opt.range).textContent=all.length?all.length+' marca'+(all.length>1?'s':'')+' con ventas':'';
+  document.getElementById(opt.range).textContent=all.length?all.length+' '+(all.length>1?opt.many:opt.one)+' con ventas':'';
   document.getElementById(opt.tbl).innerHTML=`<thead><tr>
-      <th style="width:34px">#</th><th>Marca</th><th class="n">Valor</th><th class="n">Und</th><th class="n">Pedidos</th><th class="n">% total</th>
-    </tr></thead><tbody>${all.slice(0,15).map((o,i)=>`<tr>
+      <th style="width:34px">#</th><th>${opt.label}</th><th class="n">Valor</th><th class="n">Und</th><th class="n">Pedidos</th><th class="n">% total</th>
+    </tr></thead><tbody>${all.slice(0,opt.limit).map((o,i)=>`<tr${opt.subField?` class="cat-row" data-g="${opt.tbl}-${i}" title="Clic para ver subcategorías"`:''}>
       <td class="num" style="color:var(--muted)">${i+1}</td>
-      <td><b>${o.key}</b>
+      <td><b>${opt.subField?'<span class="cat-caret">▸</span> ':''}${o.key}</b>
         <div style="height:4px;background:var(--line);border-radius:3px;margin-top:5px;overflow:hidden">
           <i style="display:block;height:100%;width:${(o.value/maxV*100).toFixed(1)}%;background:var(--primary)"></i></div></td>
       <td class="n">${fmtMoney(o.value)}</td>
       <td class="n">${fmtInt(o.qty)}</td>
       <td class="n">${fmtInt(o.n)}</td>
-      <td class="n">${(o.value/totV*100).toFixed(1)}%</td></tr>`).join('')||'<tr><td colspan="6">Sin datos</td></tr>'}</tbody>`;
+      <td class="n">${(o.value/totV*100).toFixed(1)}%</td></tr>${opt.subField?subRows(o.key,i):''}`).join('')||'<tr><td colspan="6">Sin datos</td></tr>'}</tbody>`;
 
   /* 2. Top 3 marcas por semana */
   document.getElementById(opt.per).innerHTML=ws.map(w=>{
-    const b=agg(w.rows,'brandG').sort((a,c)=>c.value-a.value).slice(0,3);
+    const b=agg(w.rows,F).sort((a,c)=>c.value-a.value).slice(0,opt.topN);
     const tw=w.value||1;
     if(!b.length) return `<div class="lcard"><div class="wkname">${w.name}</div><div class="pname">Sin ventas</div></div>`;
     return `<div class="lcard">
       <div class="wkname">${w.name}${w.label?' · '+w.label:''}</div>
-      <div class="pname" style="min-height:0">${b[0].key}</div>
+      ${opt.showLead?`<div class="pname" style="min-height:0">${b[0].key}</div>`:''}
       ${b.map((o,i)=>`<div style="padding:7px 0;border-top:1px dashed var(--line)">
         <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px">
           <span style="font-weight:600">${i+1}. ${o.key}</span>
@@ -1049,7 +1269,7 @@ function renderBrands(ws,rows,opt){
   const cell=rs=>{
     if(!rs.length) return '<td style="color:var(--muted)">—</td>';
     const tv=rs.reduce((s,r)=>s+r.value,0)||1;
-    const lead=maxBy(agg(rs,'brandG'),o=>o.value);
+    const lead=maxBy(agg(rs,F),o=>o.value);
     return `<td><b>${lead.key}</b><br><small class="num" style="color:var(--muted)">${fmtMoneyShort(lead.value)} · ${fmtInt(lead.qty)} und · ${(lead.value/tv*100).toFixed(0)}%</small></td>`;
   };
   document.getElementById(opt.matrix).innerHTML=`<thead><tr>
@@ -1060,6 +1280,36 @@ function renderBrands(ws,rows,opt){
         ${ws.map(w=>cell(w.rows.filter(r=>r.platform===p))).join('')}
         ${cell(rp)}</tr>`;
     }).join('')||'<tr><td>Sin datos</td></tr>'}</tbody>`;
+}
+
+/* --- ventas por subcategoría: todas, de mayor a menor valor --- */
+function renderSubcats(rows,tblId,rngId){
+  const totV=rows.reduce((s,r)=>s+r.value,0)||1;
+  const subs=agg(rows,'subG').sort((a,b)=>b.value-a.value);
+  const maxV=subs.length?subs[0].value:1;
+  document.getElementById(rngId).textContent=subs.length?subs.length+' subcategoría'+(subs.length>1?'s':'')+' con ventas':'';
+  document.getElementById(tblId).innerHTML=`<thead><tr>
+      <th style="width:34px">#</th><th>Subcategoría</th><th>Categoría</th><th class="n">Valor</th><th class="n">Und</th><th class="n">Pedidos</th><th class="n">% total</th>
+    </tr></thead><tbody>${subs.map((o,i)=>{
+      const [cat,sub]=String(o.key).split(' › ');
+      const rs=rows.filter(r=>r.subG===o.key), tv=o.value||1;
+      const terms=agg(rs,'catTerm').sort((x,y)=>y.value-x.value).map(t=>{
+        const nProd=new Set(rs.filter(r=>r.catTerm===t.key).map(r=>r.product)).size;
+        return `<tr class="sub-row hidden" data-p="${tblId}-${i}">
+        <td></td><td style="padding-left:28px;color:var(--muted)">${t.key}</td>
+        <td style="color:var(--muted);font-size:12px">${fmtInt(nProd)} producto${nProd>1?'s':''}</td>
+        <td class="n">${fmtMoney(t.value)}</td><td class="n">${fmtInt(t.qty)}</td><td class="n">${fmtInt(t.n)}</td>
+        <td class="n" style="color:var(--muted)">${(t.value/tv*100).toFixed(1)}% de la subcat.</td></tr>`;}).join('');
+      return `<tr class="cat-row" data-g="${tblId}-${i}" title="Clic para ver los productos que la componen">
+      <td class="num" style="color:var(--muted)">${i+1}</td>
+      <td><b><span class="cat-caret">▸</span> ${sub}</b>
+        <div style="height:4px;background:var(--line);border-radius:3px;margin-top:5px;overflow:hidden">
+          <i style="display:block;height:100%;width:${(o.value/maxV*100).toFixed(1)}%;background:var(--primary)"></i></div></td>
+      <td style="color:var(--muted)">${cat}</td>
+      <td class="n">${fmtMoney(o.value)}</td>
+      <td class="n">${fmtInt(o.qty)}</td>
+      <td class="n">${fmtInt(o.n)}</td>
+      <td class="n">${(o.value/totV*100).toFixed(1)}%</td></tr>${terms}`;}).join('')||'<tr><td colspan="7">Sin datos</td></tr>'}</tbody>`;
 }
 
 /* =========================================================
@@ -1082,7 +1332,9 @@ const MS_FILTERS={
   plat: {sel:'fPlat',field:'platform',all:'Todas las plataformas',many:'plataformas seleccionadas',empty:'Sin plataformas con esos filtros',
          ctx:()=>filtered(activeTab==='month',false,true),dot:true},
   month:{sel:'fMonth',field:'monthName',all:'Todos los meses',many:'meses seleccionados',empty:'Sin meses con esos filtros',
-         ctx:()=>filtered(true,false,false,true),dot:false,chrono:true}
+         ctx:()=>filtered(true,false,false,true),dot:false,chrono:true},
+  cat:  {sel:'fCat',field:'catG',all:'Todas las categorías',many:'categorías seleccionadas',empty:'Sin categorías con esos filtros',
+         ctx:()=>filtered(activeTab==='month',false,false,false,true),dot:false,alpha:true}
 };
 function buildMsUI(cfg){
   const selEl=document.getElementById(cfg.sel);
@@ -1108,7 +1360,7 @@ function buildMsUI(cfg){
   const v=sel(cfg.sel);
   document.getElementById(cfg.sel+'Lbl').textContent=!v.length?cfg.all:v.length<=2?v.join(', '):v.length+' '+cfg.many;
 }
-function buildBrandUI(){ buildMsUI(MS_FILTERS.brand); buildMsUI(MS_FILTERS.plat); buildMsUI(MS_FILTERS.month); }
+function buildBrandUI(){ buildMsUI(MS_FILTERS.brand); buildMsUI(MS_FILTERS.plat); buildMsUI(MS_FILTERS.month); buildMsUI(MS_FILTERS.cat); }
 
 /* Agrupa por mes calendario. Ignora el filtro de semana (no aplica a meses). */
 function monthStats(rows){
@@ -1129,7 +1381,10 @@ function monthStats(rows){
 function renderMonths(){
   const rows=filtered(true); // ignora selector de semana
   const ms=monthStats(rows);
-  renderBrands(ms,rows,{range:'mBrandRange',tbl:'mTblBrands',per:'mBrandMonth',matrix:'mTblBrandMatrix',unit:'del mes'});
+  renderBrands(ms,rows,{range:'mBrandRange',tbl:'mTblBrands',per:'mBrandMonth',matrix:'mTblBrandMatrix',unit:'del mes',topN:10,showLead:false});
+  renderBrands(ms,rows,{range:'mCatRange',tbl:'mTblCats',per:'mCatMonth',matrix:'mTblCatMatrix',unit:'del mes',topN:10,showLead:false,
+    field:'catG',label:'Categoría',one:'categoría',many:'categorías',limit:50,subField:'subG'});
+  renderSubcats(rows,'mTblCatsSubs','mSubRange');
 
   /* Top 10 productos: todo el período o un mes elegido */
   {
@@ -1766,7 +2021,8 @@ Object.values(MS_FILTERS).forEach(cfg=>{
 document.addEventListener('click',e=>{document.querySelectorAll('.ms.open').forEach(ms=>{if(!ms.contains(e.target))ms.classList.remove('open');});});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.ms.open').forEach(ms=>ms.classList.remove('open'));});
 document.getElementById('btnReset').onclick=()=>{
-  ['fPlat','fBrand','fMonth'].forEach(id=>[...document.getElementById(id).options].forEach(o=>o.selected=false));
+  ['fPlat','fBrand','fMonth','fCat'].forEach(id=>[...document.getElementById(id).options].forEach(o=>o.selected=false));
+  document.getElementById('fCatSearch').value='';
   document.getElementById('fMonthSearch').value='';
   document.getElementById('fBrandSearch').value='';
   document.getElementById('fPlatSearch').value='';
@@ -1784,6 +2040,23 @@ bindToggle('tgPlat','plat',()=>{const r=filtered();renderPlatformChart(weekStats
 bindToggle('tgDay','day',()=>renderDaily(filtered()));
 bindToggle('tgMonth','month',renderMonths);
 bindToggle('tgMonthPlat','mplat',renderMonths);
+
+/* --- categorías: clic en una fila muestra / oculta sus subcategorías --- */
+document.addEventListener('click',e=>{
+  const tr=e.target.closest('tr.cat-row'); if(!tr) return;
+  const open=tr.classList.toggle('open');
+  document.querySelectorAll(`tr.sub-row[data-p="${tr.dataset.g}"]`).forEach(x=>x.classList.toggle('hidden',!open));
+});
+
+/* --- tablas contraídas por defecto: clic en el título las muestra u oculta --- */
+function toggleCollapse(head){
+  const open=head.classList.toggle('open');
+  head.setAttribute('aria-expanded',open);
+  head.querySelector('.collapse-hint').textContent=open?'Ocultar':'Mostrar';
+  document.getElementById(head.dataset.target).classList.toggle('hidden',!open);
+}
+document.addEventListener('click',e=>{const hd=e.target.closest('.collapse-head'); if(hd) toggleCollapse(hd);});
+document.addEventListener('keydown',e=>{const hd=e.target.closest&&e.target.closest('.collapse-head'); if(hd&&(e.key==='Enter'||e.key===' ')){e.preventDefault();toggleCollapse(hd);}});
 
 /* --- pestañas --- */
 function setTab(pane){
