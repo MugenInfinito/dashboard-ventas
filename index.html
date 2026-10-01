@@ -110,6 +110,29 @@ section{margin-bottom:22px}
 }
 .f select[multiple]{height:96px}
 
+/* ---------- sección de filtros: cuadrícula ordenada ---------- */
+.filters.filters-grid{grid-template-columns:repeat(6,minmax(0,1fr));align-items:start;gap:14px 12px}
+.filters-grid .f > select,.filters-grid .f > input,.filters-grid .ms-btn{height:38px;box-sizing:border-box}
+@media (max-width:1180px){.filters.filters-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:720px){.filters.filters-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:460px){.filters.filters-grid{grid-template-columns:1fr}}
+
+/* ---------- filtro de marca con casillas ---------- */
+.ms{position:relative}
+.ms-btn{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);cursor:pointer;font-size:13px}
+.ms-btn span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.ms-panel{display:none;position:absolute;z-index:30;top:calc(100% + 4px);left:0;min-width:100%;width:280px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 28px rgba(11,26,36,.16);padding:8px}
+.ms.open .ms-panel{display:block}
+.ms-actions{display:flex;justify-content:space-between;margin:6px 0 4px}
+.ms-actions button{border:0;background:none;color:var(--primary);font-weight:600;cursor:pointer;font-size:12px;padding:2px 0}
+.ms-list{max-height:280px;overflow:auto}
+.f .ms-item{display:flex;align-items:center;gap:8px;padding:6px 6px;margin:0;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--ink);cursor:pointer;border-radius:5px}
+.f .ms-item:hover{background:#F2F6F8}
+.f .ms-item input{width:auto;padding:0;margin:0;flex:0 0 auto}
+.f .ms-item small{margin-left:auto;padding-left:12px;white-space:nowrap;color:var(--muted);font-family:var(--mono);font-size:11px}
+.ms-empty{color:var(--muted);font-size:12px;padding:6px 4px}
+
 /* ---------- tabs ---------- */
 .tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--line);flex-wrap:wrap}
 .tab{
@@ -257,8 +280,8 @@ tfoot td{font-weight:700;border-top:2px solid var(--line);background:#F8FAFB}
 
     <!-- TABS -->
     <div class="tabs" id="tabs">
-      <button class="tab on" data-pane="week">Comparación semanal</button>
-      <button class="tab" data-pane="month">Comparación mensual</button>
+      <button class="tab on" data-pane="month">Comparación mensual</button>
+      <button class="tab" data-pane="week">Comparación semanal</button>
     </div>
 
     <!-- FILTERS (compartidos entre pestañas) -->
@@ -268,10 +291,44 @@ tfoot td{font-weight:700;border-top:2px solid var(--line);background:#F8FAFB}
           <span class="spacer"></span>
           <button class="btn" id="btnReset" style="background:#fff;color:var(--ink);border-color:var(--line)">Quitar filtros</button>
         </div>
-        <div class="filters">
-          <div class="f" id="fWeekWrap"><label>Semana</label><select id="fWeek"><option value="">Todas</option></select></div>
-          <div class="f"><label>Plataforma</label><select id="fPlat" multiple></select></div>
-          <div class="f"><label>Marca</label><select id="fBrand" multiple></select></div>
+        <div class="filters filters-grid">
+          <div class="f" id="fMonthWrap"><label>Mes</label>
+            <!-- meses completos según los datos; vacío = todos -->
+            <select id="fMonth" multiple hidden></select>
+            <div class="ms" id="fMonthMs">
+              <button type="button" class="ms-btn" id="fMonthBtn"><span id="fMonthLbl">Todos los meses</span><span aria-hidden="true">▾</span></button>
+              <div class="ms-panel">
+                <input type="search" id="fMonthSearch" placeholder="Buscar mes…">
+                <div class="ms-actions"><button type="button" id="fMonthAll">Marcar los visibles</button><button type="button" id="fMonthNone">Limpiar</button></div>
+                <div class="ms-list" id="fMonthList"></div>
+              </div>
+            </div>
+          </div>
+          <div class="f hidden" id="fWeekWrap"><label>Semana</label><select id="fWeek"><option value="">Todas</option></select></div>
+          <div class="f"><label>Plataforma</label>
+            <!-- el select oculto guarda la selección; las casillas lo manejan. Vacío = todas -->
+            <select id="fPlat" multiple hidden></select>
+            <div class="ms" id="fPlatMs">
+              <button type="button" class="ms-btn" id="fPlatBtn"><span id="fPlatLbl">Todas las plataformas</span><span aria-hidden="true">▾</span></button>
+              <div class="ms-panel">
+                <input type="search" id="fPlatSearch" placeholder="Buscar plataforma…">
+                <div class="ms-actions"><button type="button" id="fPlatAll">Marcar las visibles</button><button type="button" id="fPlatNone">Limpiar</button></div>
+                <div class="ms-list" id="fPlatList"></div>
+              </div>
+            </div>
+          </div>
+          <div class="f"><label>Marca</label>
+            <!-- el select oculto guarda la selección; las casillas lo manejan -->
+            <select id="fBrand" multiple hidden></select>
+            <div class="ms" id="fBrandMs">
+              <button type="button" class="ms-btn" id="fBrandBtn"><span id="fBrandLbl">Todas las marcas</span><span aria-hidden="true">▾</span></button>
+              <div class="ms-panel">
+                <input type="search" id="fBrandSearch" placeholder="Buscar marca…">
+                <div class="ms-actions"><button type="button" id="fBrandAll">Marcar las visibles</button><button type="button" id="fBrandNone">Limpiar</button></div>
+                <div class="ms-list" id="fBrandList"></div>
+              </div>
+            </div>
+          </div>
           <div class="f"><label>Producto contiene</label><input type="search" id="fProd" placeholder="ej. router, TP-Link"></div>
           <div class="f"><label>Desde</label><input type="date" id="fFrom"></div>
           <div class="f"><label>Hasta</label><input type="date" id="fTo"></div>
@@ -280,7 +337,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line);background:#F8FAFB}
     </section>
 
     <!-- ======================= PESTAÑA SEMANAL ======================= -->
-    <div id="paneWeek">
+    <div id="paneWeek" class="hidden">
 
     <!-- WEEK STRIP -->
     <section>
@@ -407,15 +464,42 @@ tfoot td{font-weight:700;border-top:2px solid var(--line);background:#F8FAFB}
       </div>
     </section>
 
+    <!-- VENTAS POR MARCA -->
+    <section>
+      <div class="sec-head"><span class="sec-num">MR</span><h2>Ventas por marca</h2><p>Marca detectada en la columna Notas ítem. Si no coincide con ninguna de la lista, se agrupa en Generico.</p></div>
+      <div class="grid2">
+        <div class="card">
+          <div class="sec-head"><h2>Marcas más vendidas</h2><p id="brandRange"></p></div>
+          <div class="tablewrap"><table id="tblBrands"></table></div>
+        </div>
+        <div class="card">
+          <div class="sec-head"><h2>Marca más vendida por semana</h2><p>Top 3 por valor.</p></div>
+          <div class="cards" id="brandWeek" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="sec-head"><h2>Marca más vendida por plataforma y semana</h2><p>Marca líder por valor en cada cruce. La última columna es el período completo.</p></div>
+        <div class="tablewrap"><table id="tblBrandMatrix"></table></div>
+      </div>
+    </section>
+
     </div><!-- /paneWeek -->
 
     <!-- ======================= PESTAÑA MENSUAL ======================= -->
-    <div id="paneMonth" class="hidden">
+    <div id="paneMonth">
 
       <!-- month KPIs -->
       <section>
         <div class="sec-head"><span class="sec-num">M1</span><h2>Indicadores por período</h2><p id="mKpiRange"></p></div>
         <div class="kpis" id="mKpis" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))"></div>
+      </section>
+
+      <!-- participación por plataforma en el período -->
+      <section>
+        <div class="card">
+          <div class="sec-head"><span class="sec-num">M1b</span><h2>Participación por plataforma</h2><p id="mPartRange"></p></div>
+          <div id="mPart"></div>
+        </div>
       </section>
 
       <!-- month comparison bar -->
@@ -457,6 +541,31 @@ tfoot td{font-weight:700;border-top:2px solid var(--line);background:#F8FAFB}
         <div class="card">
           <div class="sec-head"><span class="sec-num">M5</span><h2>Resumen mensual</h2></div>
           <div class="tablewrap"><table id="tblMonth"></table></div>
+        </div>
+      </section>
+
+      <!-- month brands -->
+      <section>
+        <div class="sec-head"><span class="sec-num">M6</span><h2>Ventas por marca</h2><p>Marca detectada en la columna Notas ítem. Si no coincide con ninguna de la lista, se agrupa en Generico.</p></div>
+        <div class="card">
+          <div class="sec-head"><h2>Marcas más vendidas</h2><p id="mBrandRange"></p></div>
+          <div class="tablewrap"><table id="mTblBrands"></table></div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="sec-head"><h2>Marca más vendida por mes</h2><p>Top 3 por valor.</p></div>
+          <!-- una sola fila: si hay muchos meses, se desplaza horizontalmente -->
+          <div class="cards" id="mBrandMonth" style="grid-auto-flow:column;grid-auto-columns:minmax(240px,1fr);grid-template-columns:none;overflow-x:auto;padding-bottom:4px"></div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="sec-head"><h2>Marca más vendida por plataforma y mes</h2><p>Marca líder por valor en cada cruce. La última columna es el período completo.</p></div>
+          <div class="tablewrap"><table id="mTblBrandMatrix"></table></div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="sec-head"><h2>Top 10 productos más vendidos</h2><p>Ordenados por valor.</p>
+            <span class="spacer"></span>
+            <select id="mTopMonth" style="padding:6px 9px;border:1px solid var(--line);border-radius:7px"></select>
+          </div>
+          <div class="tablewrap"><table id="mTblTop"></table></div>
         </div>
       </section>
 
@@ -602,9 +711,50 @@ function readWorkbook(data,name){
   autoMap(); buildMapUI(); process();
 }
 
+/* =========================================================
+   MARCAS: lista oficial y detección sobre la columna C (Notas ítem)
+   ========================================================= */
+const BRAND_LIST=['1Hora','3Bumen','Acer','ADATA','AKG','Alcatel','Anker','Argom Tech','Artecma','Astro',
+  'Audio-technica','Avantree','Belkin','Berhlan','Beston','Blue','Bluedio','Boya','Brother','CDP',
+  'Cooler Master','D-link','Delux','Epson','Ezviz','Forza','Generico','Genius','Google','Harman Kardon',
+  'Hercules','Hikvision','Honor','HP','Huawei','HyperX','Infinix','Jabra','JBL','Kalley','Kingston',
+  'Klip Xtreme','Laserjet','Lenovo','LG','Linksys','Logitech','Logitech G','Meizu','Mercusys','Meta',
+  'Microsoft','Midea','Miokee','Mophie','Motorola','Neffos','Nexxt','Omega','Oraimo','Panasonic',
+  'Philips','Poco','Poly','Primus','Razer','Realme','Redragon','Remax','Samsung','Sandisk','Seagate',
+  'Sony','Star Tec','T-Dagger','Targus','TCL','TechGo','Tecno','Toshiba','TP-Link','Trust','TSC',
+  'Ultimate Ears','Unitec','Verbatim','VSG','Wacom','Wattana','X-Kim','Xiaomi','XPG','Xtech'];
+/* "Blue" también es un color: solo se asigna si no aparece ninguna otra marca. */
+const BRAND_WEAK=new Set(['Blue']);
+/* Cada marca se busca como palabra completa, sin importar mayúsculas, tildes ni
+   separadores (TP-Link = TP Link = TPLink). Así "HP" no coincide dentro de otra palabra
+   y "Blue" no coincide dentro de "Bluetooth". */
+const BRAND_RX=BRAND_LIST.map(name=>{
+  const tokens=norm(name).split(/[^a-z0-9]+/).filter(Boolean);
+  const body=tokens.map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('[\\s\\-_./]*');
+  return {name,len:tokens.join('').length,weak:BRAND_WEAK.has(name),
+          rx:new RegExp('(^|[^a-z0-9])'+body+'(?=$|[^a-z0-9])')};
+});
+function detectBrand(text){
+  const t=norm(text);
+  if(!t) return 'Generico';
+  let best=null;
+  BRAND_RX.forEach(b=>{
+    const m=b.rx.exec(t); if(!m) return;
+    const pos=m.index+m[1].length;
+    const cand={name:b.name,pos,len:b.len,weak:b.weak};
+    if(!best
+      || (best.weak && !cand.weak)                                   // marca real gana a "Blue"
+      || (best.weak===cand.weak && (pos<best.pos                     // la que aparece primero
+          || (pos===best.pos && cand.len>best.len))))                // "Logitech G" gana a "Logitech"
+      best=cand;
+  });
+  return best?best.name:'Generico';
+}
+
 function autoMap(){
   const find=(re,exclude)=>HEADERS.find(h=>re.test(norm(h))&&(!exclude||!exclude.test(norm(h))));
   MAP={
+    notes: find(/notas?\s*(de\s*)?item/) || HEADERS[2] || '',
     date:  find(/fecha|date|dia\b|día|creaci|emisi/) || HEADERS[0],
     product: find(/producto|articulo|item|descripcion|titulo|nombre|sku.*nombre/) || find(/sku|referencia/) || HEADERS[1],
     brand: find(/marca|brand|fabricante/) || '',
@@ -616,7 +766,7 @@ function autoMap(){
 }
 
 function buildMapUI(){
-  const fields=[['date','Fecha'],['product','Producto'],['brand','Marca'],['qty','Cantidad'],['value','Valor'],['platform','Plataforma'],['order','Pedido / orden']];
+  const fields=[['date','Fecha'],['product','Producto'],['brand','Marca'],['qty','Cantidad'],['value','Valor'],['platform','Plataforma'],['order','Pedido / orden'],['notes','Notas ítem (marca)']];
   document.getElementById('mapFields').innerHTML=fields.map(([k,l])=>`
     <div class="f"><label>${l}</label><select data-map="${k}">
       <option value="">— sin columna —</option>
@@ -658,21 +808,75 @@ function buildWeeks(anchorDate){
 }
 let _lastAnchorKey=null; // evita reconstruir en cada render si no cambió el "Desde"
 
+/* Unificación de plataformas: varias cuentas/modalidades se agrupan en una sola.
+   Se compara sin importar mayúsculas, tildes ni espacios alrededor de los guiones.
+   Se acepta el valor completo ("MFULL-MERCADO LIBRE FULL") o solo el código ("MFULL"). */
+const PLATFORM_GROUPS={
+  'ADDI':['ADDI-ADDI','ADD-ADDI','ADDIF-ADDI FLEX','ADDILOG-ADDI LOGITECH','ADDILOF-ADDI LOGITECH FLEX'],
+  'MERCADO LIBRE':['ME-MERCADO LIBRE','MFULL-MERCADO LIBRE FULL','MF-MERCADO LIBRE FLEX',
+                   'TO-ML-TIENDA OFICIAL','OF-TIENDA OFICIAL FLEX','TFULL-MERCADO LIBRE TIENDA OF FULL'],
+  'LOGITECH STORE':['LOGI-LOGITECH STORE','LOGIF-LOGITECH STORE FLEX'],
+  'FALABELLA':['FB-FALABELLA','FB-FULL-FALABELLA FULL','FLOG-Falabella Logitech'],
+  'PUNTOS COLOMBIA':['PC-PUNTOS COLOMBIA','PF-PUNTOS FLEX'],
+  /* Solo cambio de nombre (se muestra únicamente el nombre de la plataforma) */
+  'WHATSAPP':['LOCAL-W-WHATSAPP'],
+  'JD SHOP':['JD-JD SHOP'],
+  'LOCAL':['LOCAL-E-LOCAL'],
+  'AGAVAL':['GVL-AGAVAL'],
+  'OLIMPICA':['OLIM-OLIMPICA'],
+  'LUEGO PAGO':['LUE-LUEGO PAGO'],
+  'RAPPI':['RP-RAPPI'],
+  'MUNDO GAMER':['MG-MUNDO GAMER'],
+  'JUMBO-CENCOSUD':['JCEN-CENCOSUD'],
+  'AL CARRITO':['ALC-AL CARRITO'],
+  'APER-BANCOLOMBIA':['AP-APER'],
+  'DIDI':['DID-DIDI'],
+  'ÉXITO':['ÉXITO-ALMACENES ÉXITO'],
+  'LOGITECH STORE WHATSAPP':['LOGI-WH-LOGITECH STORE WHATSAPP'],
+  'NEGOCIACIONES':['NEGOCIO-NEGOCIACIONES']
+};
+/* Plataformas que no se tienen en cuenta en ningún cálculo */
+const PLATFORM_EXCLUDED=['GTA-GARANTÍA'];
+const platKey=s=>norm(s).replace(/\s*-\s*/g,'-').replace(/\s+/g,' ').trim();
+const PLATFORM_MAP=new Map();
+Object.entries(PLATFORM_GROUPS).forEach(([group,list])=>list.forEach(v=>{
+  PLATFORM_MAP.set(platKey(v),group);
+  // código solo: todo lo que va antes del nombre (ej. "TO-ML", "FB-FULL", "MFULL")
+  const code=v.match(/^(.*?)-[^-]*$/); if(code) PLATFORM_MAP.set(platKey(code[1]),group);
+}));
+const PLATFORM_EXCLUDED_KEYS=new Set();
+PLATFORM_EXCLUDED.forEach(v=>{
+  PLATFORM_EXCLUDED_KEYS.add(platKey(v));
+  const code=v.match(/^(.*?)-[^-]*$/); if(code) PLATFORM_EXCLUDED_KEYS.add(platKey(code[1]));
+});
+const isExcludedPlatform=raw=>PLATFORM_EXCLUDED_KEYS.has(platKey((raw??'').toString()));
+function unifyPlatform(raw){
+  const s=(raw??'').toString().trim();
+  if(!s) return '';
+  return PLATFORM_MAP.get(platKey(s))||s;
+}
+
 function process(){
   ROWS=[];
-  let noDate=0;
+  let noDate=0, noPlat=0, noExcl=0;
   RAW.forEach(r=>{
     const d=parseDate(r[MAP.date]);
     if(!d){noDate++;return;}
+    if(isExcludedPlatform(r[MAP.platform])){noExcl++;return;} // GTA-GARANTÍA no se tiene en cuenta
+    const plat=unifyPlatform(r[MAP.platform]);
+    if(!plat){noPlat++;return;} // registros sin plataforma no se tienen en cuenta
     const qty=MAP.qty?parseNum(r[MAP.qty]):1;
     const val=MAP.value?parseNum(r[MAP.value]):0;
     ROWS.push({
       date:d, ts:d.getTime(),
       product:(r[MAP.product]??'(sin producto)').toString().trim()||'(sin producto)',
       brand:MAP.brand?((r[MAP.brand]??'(sin marca)').toString().trim()||'(sin marca)'):'(sin marca)',
-      platform:(r[MAP.platform]??'(sin plataforma)').toString().trim()||'(sin plataforma)',
+      platform:plat,
       qty: qty||0, value: val||0,
-      order: MAP.order?String(r[MAP.order]??''):''
+      order: MAP.order?String(r[MAP.order]??''):'',
+      brandG: detectBrand(MAP.notes?r[MAP.notes]:''),
+      mkey: d.getFullYear()*12+d.getMonth(),
+      monthName: MONTHS[d.getMonth()].charAt(0).toUpperCase()+MONTHS[d.getMonth()].slice(1)+' '+d.getFullYear()
     });
   });
   if(!ROWS.length){alert('No se pudo leer ninguna fecha válida. Revisa el mapeo de columnas.');return;}
@@ -681,16 +885,19 @@ function process(){
   buildWeeks(); // ancla por defecto: miércoles anterior o igual a la primera fecha
 
   const w=document.getElementById('warn');
-  if(noDate>0){
+  if(noDate>0||noPlat>0){ // GTA-GARANTÍA se excluye en silencio (noExcl no se muestra)
     w.classList.remove('hidden');
     w.style.background='#FFF8E6';w.style.borderColor='#F0DCA8';w.style.color='#7A5A05';
-    w.textContent=`Se omitieron ${fmtInt(noDate)} filas sin fecha reconocible. Si son muchas, revisa el mapeo de la columna de fecha.`;
+    const msgs=[];
+    if(noDate>0) msgs.push(`Se omitieron ${fmtInt(noDate)} filas sin fecha reconocible. Si son muchas, revisa el mapeo de la columna de fecha.`);
+    if(noPlat>0) msgs.push(`No se tuvieron en cuenta ${fmtInt(noPlat)} registros sin plataforma.`);
+    w.textContent=msgs.join(' ');
   }
   else w.classList.add('hidden');
 
   document.getElementById('empty').classList.add('hidden');
   document.getElementById('dash').classList.remove('hidden');
-  buildFilters(); render();
+  buildFilters(); setTab('month'); // al cargar datos se abre la comparación mensual
 }
 
 /* =========================================================
@@ -701,11 +908,15 @@ function buildFilters(){
   const fw=document.getElementById('fWeek');
   fw.innerHTML='<option value="">Todas las semanas</option>'+WEEKS.map(w=>`<option value="${w.i}">${w.name} · ${w.label}</option>`).join('');
   document.getElementById('fPlat').innerHTML=uniq('platform').map(p=>`<option value="${p.replace(/"/g,'&quot;')}">${p}</option>`).join('');
-  document.getElementById('fBrand').innerHTML=uniq('brand').map(p=>`<option value="${p.replace(/"/g,'&quot;')}">${p}</option>`).join('');
+  document.getElementById('fBrand').innerHTML=uniq('brandG').map(p=>`<option value="${p.replace(/"/g,'&quot;')}">${p}</option>`).join('');
+  MONTH_ORDER=new Map(); ROWS.forEach(r=>MONTH_ORDER.set(r.monthName,r.mkey));
+  document.getElementById('fMonth').innerHTML=[...MONTH_ORDER.keys()].sort((a,b)=>MONTH_ORDER.get(a)-MONTH_ORDER.get(b))
+    .map(m=>`<option value="${m}">${m}</option>`).join('');
   document.getElementById('fFrom').value=''; document.getElementById('fTo').value='';
   document.getElementById('topWeek').innerHTML='<option value="">Todo el período</option>'+WEEKS.map(w=>`<option value="${w.i}">${w.name}</option>`).join('');
 }
 const sel=id=>[...document.getElementById(id).selectedOptions].map(o=>o.value);
+let MONTH_ORDER=new Map(); // "Jul 2026" → número para ordenar
 
 /* Refresca los desplegables de semana tras recalcular el ancla (conserva la selección válida). */
 function rebuildWeekSelect(){
@@ -716,16 +927,18 @@ function rebuildWeekSelect(){
   if([...fw.options].some(o=>o.value===cur)) fw.value=cur;
   if([...tw.options].some(o=>o.value===curTop)) tw.value=curTop;
 }
-function filtered(ignoreWeek){
+function filtered(ignoreWeek,ignoreBrand,ignorePlat,ignoreMonth){
   const wk=document.getElementById('fWeek').value;
+  const months=sel('fMonth'); // el filtro de mes solo aplica en la pestaña mensual (ignoreWeek=true)
   const plats=sel('fPlat'), brands=sel('fBrand');
   const q=norm(document.getElementById('fProd').value);
   const from=document.getElementById('fFrom').value?parseDate(document.getElementById('fFrom').value):null;
   const to=document.getElementById('fTo').value?parseDate(document.getElementById('fTo').value):null;
   return ROWS.filter(r=>{
     if(!ignoreWeek && wk && r.w!==+wk) return false;
-    if(plats.length && !plats.includes(r.platform)) return false;
-    if(brands.length && !brands.includes(r.brand)) return false;
+    if(ignoreWeek && !ignoreMonth && months.length && !months.includes(r.monthName)) return false;
+    if(!ignorePlat && plats.length && !plats.includes(r.platform)) return false;
+    if(!ignoreBrand && brands.length && !brands.includes(r.brandG)) return false;
     if(q && !norm(r.product).includes(q)) return false;
     if(from && r.date<from) return false;
     if(to && r.date>to) return false;
@@ -789,17 +1002,113 @@ function render(){
   renderHeat(active);
   renderTop10(rows);
   renderAlerts(active);
+  renderBrands(active,rows);
+}
+
+/* --- ventas por marca --- */
+/* opt permite reutilizar la sección en la pestaña mensual (mismos cálculos, otros contenedores) */
+function renderBrands(ws,rows,opt){
+  opt=Object.assign({range:'brandRange',tbl:'tblBrands',per:'brandWeek',matrix:'tblBrandMatrix',unit:'de la semana'},opt);
+  const totV=rows.reduce((s,r)=>s+r.value,0)||1;
+
+  /* 1. Ranking de marcas del período */
+  const all=agg(rows,'brandG').sort((a,b)=>b.value-a.value);
+  const maxV=all.length?all[0].value:1;
+  document.getElementById(opt.range).textContent=all.length?all.length+' marca'+(all.length>1?'s':'')+' con ventas':'';
+  document.getElementById(opt.tbl).innerHTML=`<thead><tr>
+      <th style="width:34px">#</th><th>Marca</th><th class="n">Valor</th><th class="n">Und</th><th class="n">Pedidos</th><th class="n">% total</th>
+    </tr></thead><tbody>${all.slice(0,15).map((o,i)=>`<tr>
+      <td class="num" style="color:var(--muted)">${i+1}</td>
+      <td><b>${o.key}</b>
+        <div style="height:4px;background:var(--line);border-radius:3px;margin-top:5px;overflow:hidden">
+          <i style="display:block;height:100%;width:${(o.value/maxV*100).toFixed(1)}%;background:var(--primary)"></i></div></td>
+      <td class="n">${fmtMoney(o.value)}</td>
+      <td class="n">${fmtInt(o.qty)}</td>
+      <td class="n">${fmtInt(o.n)}</td>
+      <td class="n">${(o.value/totV*100).toFixed(1)}%</td></tr>`).join('')||'<tr><td colspan="6">Sin datos</td></tr>'}</tbody>`;
+
+  /* 2. Top 3 marcas por semana */
+  document.getElementById(opt.per).innerHTML=ws.map(w=>{
+    const b=agg(w.rows,'brandG').sort((a,c)=>c.value-a.value).slice(0,3);
+    const tw=w.value||1;
+    if(!b.length) return `<div class="lcard"><div class="wkname">${w.name}</div><div class="pname">Sin ventas</div></div>`;
+    return `<div class="lcard">
+      <div class="wkname">${w.name}${w.label?' · '+w.label:''}</div>
+      <div class="pname" style="min-height:0">${b[0].key}</div>
+      ${b.map((o,i)=>`<div style="padding:7px 0;border-top:1px dashed var(--line)">
+        <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px">
+          <span style="font-weight:600">${i+1}. ${o.key}</span>
+          <b class="num">${fmtMoney(o.value)}</b></div>
+        <div class="num" style="font-size:11px;color:var(--muted);text-align:right">${fmtInt(o.qty)} und · ${(o.value/tw*100).toFixed(1)}% ${opt.unit}</div>
+      </div>`).join('')}
+    </div>`;
+  }).join('')||'<div class="vcard">Sin datos</div>';
+
+  /* 3. Matriz plataforma × semana: marca líder en cada cruce */
+  const plats=agg(rows,'platform').sort((a,b)=>b.value-a.value).map(o=>o.key);
+  const cell=rs=>{
+    if(!rs.length) return '<td style="color:var(--muted)">—</td>';
+    const tv=rs.reduce((s,r)=>s+r.value,0)||1;
+    const lead=maxBy(agg(rs,'brandG'),o=>o.value);
+    return `<td><b>${lead.key}</b><br><small class="num" style="color:var(--muted)">${fmtMoneyShort(lead.value)} · ${fmtInt(lead.qty)} und · ${(lead.value/tv*100).toFixed(0)}%</small></td>`;
+  };
+  document.getElementById(opt.matrix).innerHTML=`<thead><tr>
+      <th>Plataforma</th>${ws.map(w=>`<th>${w.name}${w.label?`<br><span style="font-weight:500;text-transform:none;letter-spacing:0">${w.label}</span>`:''}</th>`).join('')}<th>Período</th>
+    </tr></thead><tbody>${plats.map(p=>{
+      const rp=rows.filter(r=>r.platform===p);
+      return `<tr><td><span class="plat-tag"><i class="dot" style="background:${platColor(p)}"></i>${p}</span></td>
+        ${ws.map(w=>cell(w.rows.filter(r=>r.platform===p))).join('')}
+        ${cell(rp)}</tr>`;
+    }).join('')||'<tr><td>Sin datos</td></tr>'}</tbody>`;
 }
 
 /* =========================================================
    PESTAÑA MENSUAL
    ========================================================= */
-let activeTab='week';
+let activeTab='month'; // la pestaña mensual es la principal
 function renderActive(){
   if(!ROWS.length) return;
   if(activeTab==='month') renderMonths();
   else render();
+  buildBrandUI();
 }
+
+/* Filtros con casillas (marca y plataforma): escoger varias opciones, con buscador.
+   Son dinámicos: listan solo lo que tiene ventas según los demás filtros activos
+   y muestran cuánto vendió cada opción. Sin nada marcado = todas. */
+const MS_FILTERS={
+  brand:{sel:'fBrand',field:'brandG',all:'Todas las marcas',many:'marcas seleccionadas',empty:'Sin marcas con esos filtros',
+         ctx:()=>filtered(activeTab==='month',true,false),dot:false,alpha:true},
+  plat: {sel:'fPlat',field:'platform',all:'Todas las plataformas',many:'plataformas seleccionadas',empty:'Sin plataformas con esos filtros',
+         ctx:()=>filtered(activeTab==='month',false,true),dot:true},
+  month:{sel:'fMonth',field:'monthName',all:'Todos los meses',many:'meses seleccionados',empty:'Sin meses con esos filtros',
+         ctx:()=>filtered(true,false,false,true),dot:false,chrono:true}
+};
+function buildMsUI(cfg){
+  const selEl=document.getElementById(cfg.sel);
+  const list=document.getElementById(cfg.sel+'List');
+  if(!selEl||!list) return;
+  const chosen=new Set(sel(cfg.sel));
+  const tot=new Map(); cfg.ctx().forEach(r=>tot.set(r[cfg.field],(tot.get(r[cfg.field])||0)+r.value));
+  const q=norm(document.getElementById(cfg.sel+'Search').value);
+  const items=[...selEl.options].map(o=>o.value)
+    .filter(v=>(tot.has(v)||chosen.has(v)) && (!q||norm(v).includes(q)))
+    .sort(cfg.chrono?(a,b)=>(MONTH_ORDER.get(b)||0)-(MONTH_ORDER.get(a)||0)   // mes: más reciente → más antiguo
+         :cfg.alpha ?(a,b)=>a.localeCompare(b,'es',{sensitivity:'base'})       // marca: alfabético
+                    :(a,b)=>(tot.get(b)||0)-(tot.get(a)||0)||a.localeCompare(b,'es'));
+  const keep=list.scrollTop;
+  list.innerHTML=items.map(v=>`<label class="ms-item"><input type="checkbox" value="${v.replace(/"/g,'&quot;')}" ${chosen.has(v)?'checked':''}>
+      ${cfg.dot?`<i class="dot" style="background:${platColor(v)}"></i>`:''}<span>${v}</span><small>${fmtMoneyShort(tot.get(v)||0)}</small></label>`).join('')
+    ||`<div class="ms-empty">${cfg.empty}</div>`;
+  list.scrollTop=keep;
+  list.querySelectorAll('input').forEach(cb=>cb.onchange=()=>{
+    const opt=[...selEl.options].find(o=>o.value===cb.value); if(opt) opt.selected=cb.checked;
+    renderActive();
+  });
+  const v=sel(cfg.sel);
+  document.getElementById(cfg.sel+'Lbl').textContent=!v.length?cfg.all:v.length<=2?v.join(', '):v.length+' '+cfg.many;
+}
+function buildBrandUI(){ buildMsUI(MS_FILTERS.brand); buildMsUI(MS_FILTERS.plat); buildMsUI(MS_FILTERS.month); }
 
 /* Agrupa por mes calendario. Ignora el filtro de semana (no aplica a meses). */
 function monthStats(rows){
@@ -820,6 +1129,31 @@ function monthStats(rows){
 function renderMonths(){
   const rows=filtered(true); // ignora selector de semana
   const ms=monthStats(rows);
+  renderBrands(ms,rows,{range:'mBrandRange',tbl:'mTblBrands',per:'mBrandMonth',matrix:'mTblBrandMatrix',unit:'del mes'});
+
+  /* Top 10 productos: todo el período o un mes elegido */
+  {
+    const selEl=document.getElementById('mTopMonth');
+    const prev=selEl.value;
+    selEl.innerHTML='<option value="">Todo el período</option>'+ms.map(x=>`<option value="${x.key}">${x.name}</option>`).join('');
+    if([...selEl.options].some(o=>o.value===prev)) selEl.value=prev;
+    const pick=selEl.value?ms.find(x=>String(x.key)===selEl.value):null;
+    const rs=pick?pick.rows:rows;
+    const totV=rs.reduce((s,r)=>s+r.value,0)||1;
+    const top10=agg(rs,'product').sort((a,b)=>b.value-a.value).slice(0,10);
+    document.getElementById('mTblTop').innerHTML=`<thead><tr>
+        <th style="width:34px">#</th><th>Producto</th><th>Marca</th><th class="n">Valor</th><th class="n">Und</th><th class="n">Pedidos</th><th class="n">% total</th>
+      </tr></thead><tbody>${top10.map((o,i)=>{
+        const mk=maxBy(agg(rs.filter(r=>r.product===o.key),'brandG'),b=>b.value);
+        return `<tr>
+        <td class="num" style="color:var(--muted)">${i+1}</td>
+        <td>${o.key}</td>
+        <td>${mk?mk.key:'—'}</td>
+        <td class="n">${fmtMoney(o.value)}</td>
+        <td class="n">${fmtInt(o.qty)}</td>
+        <td class="n">${fmtInt(o.n)}</td>
+        <td class="n">${(o.value/totV*100).toFixed(1)}%</td></tr>`;}).join('')||'<tr><td colspan="7">Sin datos</td></tr>'}</tbody>`;
+  }
 
   /* KPIs: una tarjeta independiente por cada mes, con variación vs el mes anterior */
   const chip=(cur,prev,money)=>{
@@ -835,17 +1169,49 @@ function renderMonths(){
     const p=i>0?ms[i-1]:null;
     const pl=maxBy(agg(x.rows,'platform'),o=>o.value);
     const pd=maxBy(agg(x.rows,'product'),o=>o.value);
+    const mk=maxBy(agg(x.rows,'brandG'),o=>o.value); // marca líder por valor (columna Notas ítem)
     return `<div class="lcard" style="border-top-color:${pl?platColor(pl.key):'var(--primary)'}">
       <div class="wkname">${x.name}</div>
       <div class="row"><span>Valor</span><b>${fmtMoney(x.value)} ${chip(x.value,p?p.value:null,true)}</b></div>
       <div class="row"><span>Unidades</span><b>${fmtInt(x.qty)} ${chip(x.qty,p?p.qty:null,false)}</b></div>
       <div class="row"><span>Pedidos</span><b>${fmtInt(x.orders)} ${chip(x.orders,p?p.orders:null,false)}</b></div>
       <div class="row"><span>Ticket promedio</span><b>${fmtMoney(x.ticket)} ${chip(x.ticket,p?p.ticket:null,true)}</b></div>
-      <div class="row"><span>Plataforma líder</span><b>${pl?`<span class="plat-tag"><i class="dot" style="background:${platColor(pl.key)}"></i>${pl.key}</span>`:'—'}</b></div>
-      <div class="row"><span>Producto líder</span><b style="font-size:12px">${pd?pd.key:'—'}</b></div>
+      <div class="row"><span>Plataforma líder</span><b>${pl?`<span class="plat-tag"><i class="dot" style="background:${platColor(pl.key)}"></i>${pl.key}</span> <small style="color:var(--muted);font-weight:500;font-size:11px">${fmtMoneyShort(pl.value)} · ${(pl.value/(x.value||1)*100).toFixed(1)}%</small>`:'—'}</b></div>
+      <div class="row"><span>Marca líder</span><b style="font-size:13px">${mk?`${mk.key} <small style="color:var(--muted);font-weight:500">${fmtMoneyShort(mk.value)} · ${(mk.value/(x.value||1)*100).toFixed(1)}%</small>`:'—'}</b></div>
+      <div class="row"><span>Producto líder</span><b style="font-size:12px">${pd?`${pd.key} <small style="color:var(--muted);font-weight:500;font-size:11px">${fmtMoneyShort(pd.value)} · ${(pd.value/(x.value||1)*100).toFixed(1)}%</small>`:'—'}</b></div>
     </div>`;
   }).join('') : '<div class="vcard">Sin datos en el período.</div>';
   document.getElementById('mKpiRange').textContent=ms.length?ms[0].name+' → '+ms[ms.length-1].name+' · '+ms.length+' mes'+(ms.length>1?'es':''):'';
+
+  /* Participación de cada plataforma en todo el período analizado */
+  {
+    const pp=agg(rows,'platform').sort((a,b)=>b.value-a.value);
+    const tv=rows.reduce((s,r)=>s+r.value,0)||1;
+    const tq=rows.reduce((s,r)=>s+r.qty,0)||1;
+    const tn=rows.length||1;
+    document.getElementById('mPartRange').textContent=ms.length
+      ? `${ms[0].name} → ${ms[ms.length-1].name} · ${pp.length} plataforma${pp.length>1?'s':''} · total ${fmtMoney(rows.reduce((s,r)=>s+r.value,0))}`:'';
+    document.getElementById('mPart').innerHTML=pp.length?`
+      <div class="tablewrap"><table>
+        <thead><tr><th>Plataforma</th><th style="width:38%">Participación en valor</th>
+          <th class="n">Valor</th><th class="n">Unidades</th><th class="n">% und</th><th class="n">Pedidos</th><th class="n">% pedidos</th></tr></thead>
+        <tbody>${pp.map(o=>{
+          const pv=o.value/tv*100;
+          return `<tr>
+            <td><span class="plat-tag"><i class="dot" style="background:${platColor(o.key)}"></i>${o.key}</span></td>
+            <td><div style="display:flex;align-items:center;gap:10px">
+              <div style="flex:1;height:14px;background:var(--line);border-radius:4px;overflow:hidden">
+                <i style="display:block;height:100%;width:${pv.toFixed(2)}%;background:${platColor(o.key)}"></i></div>
+              <b class="num" style="min-width:52px;text-align:right">${pv.toFixed(1)}%</b></div></td>
+            <td class="n">${fmtMoney(o.value)}</td>
+            <td class="n">${fmtInt(o.qty)}</td>
+            <td class="n">${(o.qty/tq*100).toFixed(1)}%</td>
+            <td class="n">${fmtInt(o.n)}</td>
+            <td class="n">${(o.n/tn*100).toFixed(1)}%</td></tr>`;
+        }).join('')}</tbody>
+        <tfoot><tr><td>Total</td><td></td><td class="n">${fmtMoney(tv)}</td><td class="n">${fmtInt(tq)}</td><td class="n">100%</td><td class="n">${fmtInt(tn)}</td><td class="n">100%</td></tr></tfoot>
+      </table></div>`:'<div class="note">Sin datos en el período.</div>';
+  }
 
   /* Gráfico de barras por mes */
   const isV=mode.month==='value';
@@ -1377,8 +1743,33 @@ document.addEventListener('drop',e=>{e.preventDefault();handleFile(e.dataTransfe
 ['fWeek','fPlat','fBrand','fFrom','fTo'].forEach(id=>document.getElementById(id).onchange=renderActive);
 document.getElementById('fProd').oninput=renderActive;
 document.getElementById('topWeek').onchange=()=>renderTop10(filtered());
+document.getElementById('mTopMonth').onchange=renderMonths;
+/* abrir / cerrar los paneles de marca y plataforma */
+Object.values(MS_FILTERS).forEach(cfg=>{
+  const id=cfg.sel, ms=document.getElementById(id+'Ms');
+  document.getElementById(id+'Btn').onclick=e=>{
+    e.stopPropagation();
+    document.querySelectorAll('.ms.open').forEach(x=>{if(x!==ms)x.classList.remove('open');});
+    ms.classList.toggle('open');buildMsUI(cfg);document.getElementById(id+'Search').focus();
+  };
+  document.getElementById(id+'Search').oninput=()=>buildMsUI(cfg);
+  document.getElementById(id+'All').onclick=()=>{
+    const vis=[...document.querySelectorAll('#'+id+'List input')].map(i=>i.value);
+    [...document.getElementById(id).options].forEach(o=>{if(vis.includes(o.value))o.selected=true;});
+    renderActive();
+  };
+  document.getElementById(id+'None').onclick=()=>{
+    [...document.getElementById(id).options].forEach(o=>o.selected=false);
+    renderActive();
+  };
+});
+document.addEventListener('click',e=>{document.querySelectorAll('.ms.open').forEach(ms=>{if(!ms.contains(e.target))ms.classList.remove('open');});});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.ms.open').forEach(ms=>ms.classList.remove('open'));});
 document.getElementById('btnReset').onclick=()=>{
-  ['fPlat','fBrand'].forEach(id=>[...document.getElementById(id).options].forEach(o=>o.selected=false));
+  ['fPlat','fBrand','fMonth'].forEach(id=>[...document.getElementById(id).options].forEach(o=>o.selected=false));
+  document.getElementById('fMonthSearch').value='';
+  document.getElementById('fBrandSearch').value='';
+  document.getElementById('fPlatSearch').value='';
   document.getElementById('fWeek').value='';document.getElementById('fProd').value='';
   document.getElementById('fFrom').value='';document.getElementById('fTo').value='';renderActive();
 };
@@ -1395,17 +1786,18 @@ bindToggle('tgMonth','month',renderMonths);
 bindToggle('tgMonthPlat','mplat',renderMonths);
 
 /* --- pestañas --- */
-document.querySelectorAll('#tabs .tab').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on');
-  activeTab=b.dataset.pane;
+function setTab(pane){
+  document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.toggle('on',x.dataset.pane===pane));
+  activeTab=pane;
   const wk=activeTab==='week';
   document.getElementById('paneWeek').classList.toggle('hidden',!wk);
   document.getElementById('paneMonth').classList.toggle('hidden',wk);
   // el filtro de semana no aplica a la vista mensual
   document.getElementById('fWeekWrap').classList.toggle('hidden',!wk);
+  document.getElementById('fMonthWrap').classList.toggle('hidden',wk); // el filtro de mes solo aplica a la vista mensual
   renderActive(); // se dibuja con el panel ya visible (canvas con tamaño correcto)
-});
+}
+document.querySelectorAll('#tabs .tab').forEach(b=>b.onclick=()=>setTab(b.dataset.pane));
 </script>
 </body>
 </html>
